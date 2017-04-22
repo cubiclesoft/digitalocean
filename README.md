@@ -118,3 +118,10 @@ Not everyone uses flat class SDKs.  That's okay.  There's an automated flavor of
 * [The above, Composer-enabled](https://github.com/cubiclesoft/php-libs-to-composer)
 
 You will, of course, have to adjust code accordingly.
+
+DigitalOcean API Changelog
+--------------------------
+
+The API changes regularly.  You can safely assume that both this SDK and command-line tool mirrors the API as per the most recent commit date to this repository versus the DigitalOcean API changelog:
+
+https://developers.digitalocean.com/documentation/changelog/
