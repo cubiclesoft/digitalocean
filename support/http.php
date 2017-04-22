@@ -1295,7 +1295,7 @@
 			if ($url["scheme"] != "http" && $url["scheme"] != "https")  return array("success" => false, "error" => self::HTTPTranslate("RetrieveWebpage() only supports the 'http' and 'https' protocols."), "errorcode" => "protocol_check");
 
 			$secure = ($url["scheme"] == "https");
-			$protocol = ($secure ? (isset($options["protocol"]) && strtolower($options["protocol"]) == "ssl" ? "ssl" : "tls") : "tcp");
+			$protocol = ($secure ? (isset($options["protocol"]) ? strtolower($options["protocol"]) : "tls") : "tcp");
 			if (function_exists("stream_get_transports") && !in_array($protocol, stream_get_transports()))  return array("success" => false, "error" => self::HTTPTranslate("The desired transport protocol '%s' is not installed.", $protocol), "errorcode" => "transport_not_installed");
 			$host = str_replace(" ", "-", self::HeaderValueCleanup($url["host"]));
 			if ($host == "")  return array("success" => false, "error" => self::HTTPTranslate("Invalid URL."));
@@ -1408,7 +1408,7 @@
 				$bodysize = strlen($body);
 				unset($options["body"]);
 			}
-			else if (isset($options["files"]) && count($options["files"]))
+			else if ((isset($options["files"]) && count($options["files"])) || (isset($options["headers"]["Content-Type"]) && stripos($options["headers"]["Content-Type"], "multipart/form-data") !== false))
 			{
 				$mime = "--------" . substr(sha1(uniqid(mt_rand(), true)), 0, 25);
 				$data .= "Content-Type: multipart/form-data; boundary=" . $mime . "\r\n";
@@ -1435,6 +1435,7 @@
 				$bodysize = strlen($body);
 
 				// Only count the amount of data to send.
+				if (!isset($options["files"]))  $options["files"] = array();
 				foreach ($options["files"] as $num => $info)
 				{
 					$name = self::HeaderValueCleanup($info["name"]);

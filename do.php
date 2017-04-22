@@ -1,6 +1,6 @@
 <?php
 	// DigitalOcean command-line shell for managing droplets.
-	// (C) 2016 CubicleSoft.  All Rights Reserved.
+	// (C) 2017 CubicleSoft.  All Rights Reserved.
 
 	if (!isset($_SERVER["argc"]) || !$_SERVER["argc"])
 	{
@@ -56,7 +56,7 @@
 
 	function SaveConfig($configfile, $config)
 	{
-		file_put_contents($configfile, json_encode($config, JSON_PRETTY_PRINT));
+		file_put_contents($configfile, json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 		chmod($configfile, 0660);
 	}
 
@@ -86,6 +86,7 @@
 			"droplet-actions" => "Droplet actions",
 			"images" => "Images",
 			"image-actions" => "Image actions",
+			"snapshots" => "Snapshots",
 			"ssh-keys" => "SSH keys",
 			"regions" => "Regions",
 			"sizes" => "Sizes",
@@ -106,7 +107,7 @@
 	{
 		case "account":  $apis = array("get-info" => "Get account information");  break;
 		case "actions":  $apis = array("list" => "List actions", "get-info" => "Get information about an action", "wait" => "Wait for an action to complete");  break;
-		case "volumes":  $apis = array("list" => "List Block Storage volumes", "create" => "Create a Block Storage volume", "get-info" => "Get information about a Block Storage volume", "delete" => "Delete a Block Storage volume");  break;
+		case "volumes":  $apis = array("list" => "List Block Storage volumes", "create" => "Create a Block Storage volume", "get-info" => "Get information about a Block Storage volume", "snapshots" => "List all Block Storage volume snapshots", "snapshot" => "Create a Block Storage volume snapshot", "delete" => "Delete a Block Storage volume");  break;
 		case "volume-actions":  $apis = array("attach" => "Attach a Block Storage volume to a Droplet", "detach" => "Detach a Block Storage volume from a Droplet", "resize" => "Enlarge a Block Storage volume");  break;
 		case "domains":  $apis = array("list" => "List registered domains (DNS)", "create" => "Create a domain (TLD)", "get-info" => "Get information about a domain", "delete" => "Delete a domain and all domain records");  break;
 		case "domain-records":  $apis = array("list" => "List DNS records for a domain", "create" => "Create a domain record (A, AAAA, etc.)", "update" => "Update a domain record", "get-info" => "Get information about a domain record", "delete" => "Delete a domain record");  break;
@@ -114,12 +115,13 @@
 		case "droplet-actions":  $apis = array("enable-backups" => "Enable backups", "disable-backups" => "Disable backups", "reboot" => "Reboot (gentle)", "power-cycle" => "Power cycle (hard reset)", "shutdown" => "Shutdown (gentle)", "power-off" => "Power off (forced shutdown)", "power-on" => "Power on", "restore" => "Restore from a backup image", "password-reset" => "Password reset", "resize" => "Resize Droplet", "rebuild" => "Recreate/Rebuild Droplet with a specific image", "rename" => "Rename", "change-kernel" => "Change Droplet kernel", "enable-ipv6" => "Enable IPv6 support", "enable-private-networking" => "Enable Shared Private Networking", "snapshot" => "Create a snapshot image");  break;
 		case "images":  $apis = array("list" => "List images (snapshots, backups, etc.)", "actions" => "List image actions", "rename" => "Rename image", "delete" => "Delete image", "get-info" => "Get information about an image");  break;
 		case "image-actions":  $apis = array("transfer" => "Transfer/Copy an image to another region", "convert" => "Convert a backup to a snapshot");  break;
+		case "snapshots":  $apis = array("list" => "List snapshots", "get-info" => "Get information about a snapshot", "delete" => "Delete a snapshot");  break;
 		case "ssh-keys":  $apis = array("list" => "List SSH public keys in DigitalOcean account", "create" => "Add a SSH public key to your account", "get-info" => "Get information about a SSH public key", "rename" => "Rename a SSH public key", "delete" => "Remove a SSH public key from your account");  break;
 		case "regions":  $apis = array("list" => "List all regions");  break;
 		case "sizes":  $apis = array("list" => "List all Droplet sizes");  break;
 		case "floating-ips":  $apis = array("list" => "List your Floating IPs", "create" => "Create a new Floating IP", "get-info" => "Get information about a Floating IP", "actions" => "List Floating IP actions", "delete" => "Delete a Floating IP");  break;
 		case "floating-ip-actions":  $apis = array("assign" => "Assign a Floating IP to a Droplet", "unassign" => "Unassign a Floating IP");  break;
-		case "tags":  $apis = array("list" => "List tags and associated resources", "create" => "Create a tag", "get-info" => "Get information about a tag", "rename" => "Rename a tag", "attach" => "Attach a tag to one or more resources", "detach" => "Detach one or more resources from a tag", "delete" => "Delete a tag");  break;
+		case "tags":  $apis = array("list" => "List tags and associated resources", "create" => "Create a tag", "get-info" => "Get information about a tag", "attach" => "Attach a tag to one or more resources", "detach" => "Detach one or more resources from a tag", "delete" => "Delete a tag");  break;
 		case "oauth":  $apis = array("revoke" => "Self-revoke API access");  break;
 		case "metadata-droplet":  $apis = array("get-info" => "Get information about the Droplet (see Metadata API and Cloud Config tutorials)");  break;
 	}
@@ -527,6 +529,13 @@
 			$id = $result["volume"]["id"];
 
 			if ($api === "get-info")  DisplayResult($result);
+			else if ($api === "snapshots")  DisplayResult($do->VolumesSnapshotsList($id));
+			else if ($api === "snapshot")
+			{
+				$name = CLI::GetUserInputWithArgs($args, "name", "Snapshot name", false, "", $suppressoutput);
+
+				DisplayResult($do->VolumeSnapshotCreate($id, $name));
+			}
 			else if ($api === "delete")  DisplayResult($do->VolumesDelete($id));
 		}
 	}
@@ -643,8 +652,10 @@
 				if ($type === "SRV")  $weight = (int)CLI::GetUserInputWithArgs($args, "weight", "Weight", ($api === "update" && isset($result["record"]["weight"]) ? $result["record"]["weight"] : "1"), "", $suppressoutput);
 				else  $weight = null;
 
-				if ($api === "create")  DisplayResult($do->DomainRecordsCreate($domainname, $type, $name, $data, $priority, $port, $weight));
-				else  DisplayResult($do->DomainRecordsUpdate($domainname, $id, array("type" => $type, "name" => $name, "data" => $data, "priority" => $priority, "port" => $port, "weight" => $weight)));
+				$ttl = CLI::GetUserInputWithArgs($args, "ttl", "TTL", ($api === "update" ? $result["record"]["ttl"] : "1800"), "", $suppressoutput);
+
+				if ($api === "create")  DisplayResult($do->DomainRecordsCreate($domainname, $type, $name, $data, $priority, $port, $weight, $ttl));
+				else  DisplayResult($do->DomainRecordsUpdate($domainname, $id, array("type" => $type, "name" => $name, "data" => $data, "priority" => $priority, "port" => $port, "weight" => $weight, "ttl" => $ttl)));
 			}
 			else if ($api === "get-info")  DisplayResult($result);
 			else if ($api === "delete")  DisplayResult($do->DomainRecordsDelete($domainname, $id));
@@ -714,7 +725,7 @@
 				{
 					do
 					{
-						$id = CLI::GetUserInputWithArgs($args, "volume", (count($sshkeys) ? "Another Volume ID" : "Volume ID"), "", "", $suppressoutput);
+						$id = CLI::GetUserInputWithArgs($args, "volume", (count($volumes) ? "Another Volume ID" : "Volume ID"), "", "", $suppressoutput);
 						if ($id !== "")  $volumes[] = $id;
 					} while ($id !== "" && ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "volume")));
 
@@ -758,10 +769,34 @@
 				foreach ($ids2 as $id)  $sshkeys[] = $id;
 			}
 
+			$done = false;
+			$tags = array();
+			if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "tag"))
+			{
+				do
+				{
+					$id = CLI::GetUserInputWithArgs($args, "tag", (count($tags) ? "Another tag name" : "Tag name"), "", "", $suppressoutput);
+					if ($id !== "")  $tags[] = $id;
+				} while ($id !== "" && ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "tag")));
+
+				if ($id === "")  $done = true;
+			}
+
+			if (!$done)
+			{
+				$result = $do->TagsList();
+				if (!$result["success"])  DisplayResult($result);
+
+				$ids = array();
+				foreach ($result["data"] as $tag)  $ids[$tag["name"]] = $tag["name"];
+				$ids2 = CLI::GetLimitedUserInputWithArgs($args, "tag", "Tag name", "", "Available tags:", $ids, true, $suppressoutput, array("exit" => "", "nextquestion" => "Another tag name", "nextdefault" => ""));
+				foreach ($ids2 as $id)  $tags[] = $id;
+			}
+
 			// Wait for action completion.
 			$wait = CLI::GetYesNoUserInputWithArgs($args, "wait", "Wait for completion", "Y", "The next question involves whether or not to wait for the new Droplet(s) to be created.  If you don't want to wait, you can use the 'action' ID that is returned to wait later on for completion of the task.", $suppressoutput);
 
-			$result = $do->DropletsCreate($name, $region, $size, $image, array("ssh_keys" => $sshkeys, "backups" => $backups, "ipv6" => $ipv6, "private_networking" => $privatenetwork, "volumes" => $volumes, "user_data" => ($userdata !== "" ? $userdata : null)));
+			$result = $do->DropletsCreate($name, $region, $size, $image, array("ssh_keys" => $sshkeys, "backups" => $backups, "ipv6" => $ipv6, "private_networking" => $privatenetwork, "volumes" => $volumes, "user_data" => ($userdata !== "" ? $userdata : null), "tags" => $tags));
 
 			DisplayResult($result, $wait, 10, array(5, 25, 15, 10, 5));
 		}
@@ -985,6 +1020,59 @@
 
 		DisplayResult($do->ImageActionsByID($image, $api, $actionvalues), $wait, $defaultwait, $initwait);
 	}
+	else if ($apigroup === "snapshots")
+	{
+		// Snapshots.
+		if ($api === "list")
+		{
+			$types = array(
+				"all" => "All snapshots",
+				"droplet" => "Just droplet snapshots",
+				"volume" => "Just volume snapshots"
+			);
+			$type = CLI::GetLimitedUserInputWithArgs($args, "type", "Snapshot type", "all", "Available snapshot types:", $types, true, $suppressoutput);
+
+			switch ($type)
+			{
+				case "all":  $extra = "";  break;
+				case "droplet":  $extra = "?resource_type=droplet";  break;
+				case "volume":  $extra = "?resource_type=volume";  break;
+			}
+
+			DisplayResult($do->SnapshotsList(true, $extra));
+		}
+		else
+		{
+			// Retrieve snapshot.
+			if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "snapshot"))
+			{
+				$id = CLI::GetUserInputWithArgs($args, "snapshot", "Snapshot", false, "", $suppressoutput);
+
+				$result = $do->SnapshotsGetInfo($id);
+				if (!$result["success"])  DisplayResult($result);
+			}
+			else
+			{
+				$result = $do->SnapshotsList();
+				if (!$result["success"])  DisplayResult($result);
+
+				$ids = array();
+				$ids2 = array();
+				foreach ($result["data"] as $snapshot)
+				{
+					$ids[$snapshot["id"]] = $snapshot["name"];
+					$ids2[$snapshot["id"]] = $snapshot;
+				}
+				if (!count($ids))  CLI::DisplayError("No snapshots have been created.");
+				$id = CLI::GetLimitedUserInputWithArgs($args, "snapshot", "Snapshot", false, "Available snapshots:", $ids, true, $suppressoutput);
+				unset($result["data"]);
+				$result["snapshot"] = $ids2[$id];
+			}
+
+			if ($api === "get-info")  DisplayResult($result);
+			else if ($api === "delete")  DisplayResult($do->SnapshotsDelete($id));
+		}
+	}
 	else if ($apigroup === "ssh-keys")
 	{
 		// SSH keys.
@@ -1127,12 +1215,6 @@
 			$tagname = $result["tag"]["name"];
 
 			if ($api === "get-info")  DisplayResult($result);
-			else if ($api === "rename")
-			{
-				$newname = CLI::GetUserInputWithArgs($args, "name", "New name", false, "", $suppressoutput);
-
-				DisplayResult($do->TagsRename($tagname, $newname));
-			}
 			else if ($api === "attach")
 			{
 				$resources = array();

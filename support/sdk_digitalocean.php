@@ -1,6 +1,6 @@
 <?php
 	// CubicleSoft DigitalOcean PHP SDK.
-	// (C) 2016 CubicleSoft.  All Rights Reserved.
+	// (C) 2017 CubicleSoft.  All Rights Reserved.
 
 	// Load dependencies.
 	if (!class_exists("WebBrowser", false))  require_once str_replace("\\", "/", dirname(__FILE__)) . "/web_browser.php";
@@ -378,6 +378,16 @@
 			return $this->VolumesGetInfo("", "?region=" . urlencode($region) . "&name=" . urlencode($name) . $apiextra, $options);
 		}
 
+		public function VolumesSnapshotsList($id, $numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "volumes/" . $id . "/snapshots" . $apiextra, "snapshots", $numpages, $options);
+		}
+
+		public function VolumeSnapshotCreate($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "volumes/" . $id . "/snapshots" . $apiextra, "snapshot", self::MakeJSONOptions(array("name" => $name), $options), 201);
+		}
+
 		public function VolumesDelete($id, $apiextra = "", $options = array())
 		{
 			return $this->RunAPIGetNone("DELETE", "volumes/" . $id . $apiextra, $options);
@@ -429,9 +439,9 @@
 			return $this->RunAPIGetList("GET", "domains/" . $domainname . "/records" . $apiextra, "domain_records", $numpages, $options);
 		}
 
-		public function DomainRecordsCreate($domainname, $type, $name, $data, $priority, $port, $weight, $apiextra = "", $options = array())
+		public function DomainRecordsCreate($domainname, $type, $name, $data, $priority, $port, $weight, $ttl = 1800, $apiextra = "", $options = array())
 		{
-			return $this->RunAPIGetOne("POST", "domains/" . $domainname . "/records" . $apiextra, "domain_record", self::MakeJSONOptions(array("type" => $type, "name" => $name, "data" => $data, "priority" => $priority, "port" => $port, "weight" => $weight), $options), 201);
+			return $this->RunAPIGetOne("POST", "domains/" . $domainname . "/records" . $apiextra, "domain_record", self::MakeJSONOptions(array("type" => $type, "name" => $name, "data" => $data, "priority" => $priority, "port" => $port, "weight" => $weight, "ttl" => $ttl), $options), 201);
 		}
 
 		public function DomainRecordsUpdate($domainname, $id, $updatevalues, $apiextra = "", $options = array())
@@ -558,6 +568,22 @@
 			return $result;
 		}
 
+		// Snapshots.
+		public function SnapshotsList($numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "snapshots" . $apiextra, "snapshots", $numpages, $options);
+		}
+
+		public function SnapshotsGetInfo($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "snapshots/" . $id . $apiextra, "snapshot", $options);
+		}
+
+		public function SnapshotsDelete($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "snapshots/" . $id . $apiextra, $options);
+		}
+
 		// SSH keys.
 		public function SSHKeysList($numpages = true, $apiextra = "", $options = array())
 		{
@@ -653,11 +679,6 @@
 		public function TagsGetInfo($tagname, $apiextra = "", $options = array())
 		{
 			return $this->RunAPIGetOne("GET", "tags/" . $tagname . $apiextra, "tag", $options);
-		}
-
-		public function TagsRename($tagname, $newname, $apiextra = "", $options = array())
-		{
-			return $this->RunAPIGetOne("PUT", "tags/" . $tagname . $apiextra, "tag", self::MakeJSONOptions(array("name" => $newname), $options));
 		}
 
 		public function TagsAttach($tagname, $resources, $apiextra = "", $options = array())
