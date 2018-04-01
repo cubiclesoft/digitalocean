@@ -630,6 +630,7 @@
 				$types = array(
 					"A" => "IPv4",
 					"AAAA" => "IPv6",
+					"CAA" => "Certification Authority Authorization",
 					"CNAME" => "Canonical Name/Alias",
 					"MX" => "Mail eXchange",
 					"TXT" => "Arbitrary text such as a SPF record",
@@ -638,7 +639,7 @@
 				);
 				$type = CLI::GetLimitedUserInputWithArgs($args, "type", "DNS record type", ($api === "update" ? $result["record"]["type"] : false), "Available DNS record types:", $types, true, $suppressoutput);
 
-				if ($type === "A" || $type === "AAAA" || $type === "CNAME" || $type === "TXT" || $type === "SRV")  $name = CLI::GetUserInputWithArgs($args, "name", "Name", ($api === "update" ? $result["record"]["name"] : "@"), "", $suppressoutput);
+				if ($type === "A" || $type === "AAAA" || $type === "CAA" || $type === "CNAME" || $type === "TXT" || $type === "SRV")  $name = CLI::GetUserInputWithArgs($args, "name", "Name", ($api === "update" ? $result["record"]["name"] : "@"), "", $suppressoutput);
 				else  $name = "";
 
 				$data = CLI::GetUserInputWithArgs($args, "data", "Value/data", ($api === "update" ? $result["record"]["data"] : false), "", $suppressoutput);
@@ -652,10 +653,24 @@
 				if ($type === "SRV")  $weight = (int)CLI::GetUserInputWithArgs($args, "weight", "Weight", ($api === "update" && isset($result["record"]["weight"]) ? $result["record"]["weight"] : "1"), "", $suppressoutput);
 				else  $weight = null;
 
+				if ($type === "CAA")  $flags = (int)CLI::GetUserInputWithArgs($args, "flags", "Flags", ($api === "update" && isset($result["record"]["flags"]) ? $result["record"]["flags"] : "0"), "", $suppressoutput);
+				else  $flags = null;
+
+				if ($type !== "CAA")  $tag = null;
+				else
+				{
+					$tags = array(
+						"issue" => "Grant authorization to a specific certificate issuer",
+						"issuewild" => "Grant authorization to specific certificate issuers that only specify a wildcard domain",
+						"iodef" => "Report a certificate issue request"
+					);
+					$tag = CLI::GetLimitedUserInputWithArgs($args, "tag", "CAA property tag", ($api === "update" ? $result["record"]["tag"] : false), "Available CAA property tags:", $tags, true, $suppressoutput);
+				}
+
 				$ttl = CLI::GetUserInputWithArgs($args, "ttl", "TTL", ($api === "update" ? $result["record"]["ttl"] : "1800"), "", $suppressoutput);
 
-				if ($api === "create")  DisplayResult($do->DomainRecordsCreate($domainname, $type, $name, $data, $priority, $port, $weight, $ttl));
-				else  DisplayResult($do->DomainRecordsUpdate($domainname, $id, array("type" => $type, "name" => $name, "data" => $data, "priority" => $priority, "port" => $port, "weight" => $weight, "ttl" => $ttl)));
+				if ($api === "create")  DisplayResult($do->DomainRecordsCreate($domainname, $type, $name, $data, $ttl, array("priority" => $priority, "port" => $port, "weight" => $weight, "flags" => $flags, "tag" => $tag)));
+				else  DisplayResult($do->DomainRecordsUpdate($domainname, $id, array("type" => $type, "name" => $name, "data" => $data, "priority" => $priority, "port" => $port, "weight" => $weight, "flags" => $flags, "tag" => $tag, "ttl" => $ttl)));
 			}
 			else if ($api === "get-info")  DisplayResult($result);
 			else if ($api === "delete")  DisplayResult($do->DomainRecordsDelete($domainname, $id));

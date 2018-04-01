@@ -439,9 +439,9 @@
 			return $this->RunAPIGetList("GET", "domains/" . $domainname . "/records" . $apiextra, "domain_records", $numpages, $options);
 		}
 
-		public function DomainRecordsCreate($domainname, $type, $name, $data, $priority, $port, $weight, $ttl = 1800, $apiextra = "", $options = array())
+		public function DomainRecordsCreate($domainname, $type, $name, $data, $ttl = 1800, $typevalues = array(), $apiextra = "", $options = array())
 		{
-			return $this->RunAPIGetOne("POST", "domains/" . $domainname . "/records" . $apiextra, "domain_record", self::MakeJSONOptions(array("type" => $type, "name" => $name, "data" => $data, "priority" => $priority, "port" => $port, "weight" => $weight, "ttl" => $ttl), $options), 201);
+			return $this->RunAPIGetOne("POST", "domains/" . $domainname . "/records" . $apiextra, "domain_record", self::MakeJSONOptions(array_merge(array("type" => $type, "name" => $name, "data" => $data, "ttl" => $ttl), $typevalues), $options), 201);
 		}
 
 		public function DomainRecordsUpdate($domainname, $id, $updatevalues, $apiextra = "", $options = array())
