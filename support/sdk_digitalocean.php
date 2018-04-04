@@ -131,7 +131,7 @@
 			{
 				$result["options"]["sslopts"] = self::InitSSLOpts(array());
 
-				$result2 = $web->Process($result["url"], "auto", $result["options"]);
+				$result2 = $web->Process($result["url"], $result["options"]);
 				if (!$result2["success"])
 				{
 					if ($this->accesstokens["refreshtoken"] === false)  return $result2;
@@ -844,7 +844,7 @@
 				$retries = 3;
 				do
 				{
-					$result2 = $this->web->Process($url, "auto", $options2);
+					$result2 = $this->web->Process($url, $options2);
 					if (!$result2["success"])  sleep(1);
 					$retries--;
 				} while ($retries > 0 && !$result2["success"]);
