@@ -3,11 +3,13 @@ DigitalOcean PHP SDK + Command-line Interface
 
 A DigitalOcean PHP SDK that also comes with a feature-complete command-line interface that uses the SDK.  Full support for all DigitalOcean APIs.
 
+[![Donate](https://cubiclesoft.com/res/donate-shield.png)](https://cubiclesoft.com/donate/)
+
 Features
 --------
 
-* A single, simple class for interfacing with the DigitalOcean API.  The way mother nature intended.
-* A complete, question/answer enabled command-line interface.  Nothing to compile.
+* A single, simple PHP class for interfacing with the DigitalOcean API.  An SDK the way mother nature intended.
+* Also comes with a complete, question/answer enabled command-line interface.  Nothing to compile.  Cross platform.
 * Has a liberal open source license.  MIT or LGPL, your choice.
 * Designed for relatively painless integration into your project.
 * Sits on GitHub for all of that pull request and issue tracker goodness to easily submit changes and ideas respectively.
@@ -21,7 +23,7 @@ The easiest way to get started is to play with the command-line interface.  The 
 php do.php
 ````
 
-It will enter interactive mode and guide you through the entire process.  The first time you run the tool, you can only 'setup' or use the Metadata API (i.e. this tool can be used on a Droplet).  During setup, you will see a screen like this:
+That will enter interactive mode and guide you through the entire process.  The first time you run the tool, you can only 'setup' or use the Metadata API (i.e. this tool can be used on a Droplet).  During setup, you will see a screen like this:
 
 ````
 The configuration file 'config.dat' does not exist.  Entering interactive configuration mode.
@@ -103,7 +105,7 @@ After you have set up your access token, you can start using the SDK with the va
 		"user_data" => null
 	);
 
-	var_dump($do->DropletsCreate("awesome", "nyc1", "512mb", "ubutnu-16-04-x64", $options));
+	var_dump($do->DropletsCreate("awesome", "nyc1", "512mb", "ubuntu-16-04-x64", $options));
 ````
 
 The command-line tool source code is an excellent source of example usage of the SDK.
