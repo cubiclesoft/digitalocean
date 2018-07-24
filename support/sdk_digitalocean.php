@@ -363,9 +363,9 @@
 			return $this->RunAPIGetList("GET", "volumes" . $apiextra, "volumes", $numpages, $options);
 		}
 
-		public function VolumesCreate($name, $desc, $size, $region, $apiextra = "", $options = array())
+		public function VolumesCreate($name, $desc, $size, $volumeopts = array(), $apiextra = "", $options = array())
 		{
-			return $this->RunAPIGetOne("POST", "volumes" . $apiextra, "volume", self::MakeJSONOptions(array("name" => $name, "description" => $desc, "size_gigabytes" => $size, "region" => $region), $options), 201);
+			return $this->RunAPIGetOne("POST", "volumes" . $apiextra, "volume", self::MakeJSONOptions(array_merge(array("name" => $name, "description" => $desc, "size_gigabytes" => $size), $volumeopts), $options), 201);
 		}
 
 		public function VolumesGetInfo($id, $apiextra = "", $options = array())
@@ -412,13 +412,34 @@
 			return $result;
 		}
 
+		// Certificates.
+		public function CertificatesList($numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "certificates" . $apiextra, "certificates", $numpages, $options);
+		}
+
+		public function CertificatesCreate($name, $type, $typevalues, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "certificates" . $apiextra, "certificate", self::MakeJSONOptions(array_merge(array("name" => $name, "type" => $type), $typevalues), $options), 201);
+		}
+
+		public function CertificatesGetInfo($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "certificates/" . $id . $apiextra, "certificate", $options);
+		}
+
+		public function CertificatesDelete($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "certificates/" . $id . $apiextra, $options);
+		}
+
 		// Domains.
 		public function DomainsList($numpages = true, $apiextra = "", $options = array())
 		{
 			return $this->RunAPIGetList("GET", "domains" . $apiextra, "domains", $numpages, $options);
 		}
 
-		public function DomainsCreate($name, $ipaddr, $apiextra = "", $options = array())
+		public function DomainsCreate($name, $ipaddr = null, $apiextra = "", $options = array())
 		{
 			return $this->RunAPIGetOne("POST", "domains" . $apiextra, "domain", self::MakeJSONOptions(array("name" => $name, "ip_address" => $ipaddr), $options), 201);
 		}
@@ -528,6 +549,117 @@
 			return $this->RunAPIGetOne("POST", "droplets/actions?tagname=" . urlencode($tagname) . $apiextra, "actions", self::MakeJSONOptions(array_merge(array("type" => $action), $actionvalues), $options), 201);
 		}
 
+		// Firewalls.
+		public function FirewallsList($numpages = true, $apiextra = "", $options = array())
+		{
+			$result = $this->RunAPIGetList("GET", "firewalls" . $apiextra, "firewalls", $numpages, $options);
+			if (!$result["success"])  return $result;
+
+			foreach ($result["data"] as $num => $firewall)
+			{
+				$firewall["inbound_rules"] = self::NormalizeFirewallRules($firewall["inbound_rules"], "inbound");
+				$firewall["outbound_rules"] = self::NormalizeFirewallRules($firewall["outbound_rules"], "outbound");
+
+				$result["data"][$num] = $firewall;
+			}
+
+			return $result;
+		}
+
+		public static function NormalizeFirewallRules($rules, $type)
+		{
+			if ($type !== "inbound" && $type !== "outbound")  return false;
+
+			if (!is_array($rules))  $rules = array();
+
+			$result = array();
+			foreach ($rules as $rule)
+			{
+				if (!isset($rule["protocol"]))  continue;
+
+				$protocol = strtolower($rule["protocol"]);
+				if ($protocol !== "tcp" && $protocol !== "udp" && $protocol !== "icmp")  continue;
+				if (!isset($rule["ports"]) || $rule["ports"] == 0)  $rule["ports"] = "all";
+				$ports = (string)$rule["ports"];
+
+				if ($type === "inbound")  $options = (isset($rule["sources"]) && is_array($rule["sources"]) ? $rule["sources"] : array());
+				else  $options = (isset($rule["destinations"]) && is_array($rule["destinations"]) ? $rule["destinations"] : array());
+
+				$options2 = array();
+				foreach ($options as $type2 => $items)
+				{
+					if (!is_array($items))  continue;
+
+					$items2 = array();
+					if ($type2 === "addresses" || $type2 === "load_balancer_uids" || $type2 === "tags")
+					{
+						foreach ($items as $item)
+						{
+							$item = trim($item);
+							if ($item != "")  $items2[] = $item;
+						}
+					}
+					else if ($type2 === "droplet_ids")
+					{
+						foreach ($items as $item)
+						{
+							$item = (int)$item;
+							if ($item > 0)  $items2[] = $item;
+						}
+					}
+
+					if (count($items2))  $options2[$type2] = $items2;
+				}
+
+				if (!count($options2))  continue;
+
+				$rule = array(
+					"protocol" => $protocol,
+				);
+
+				if ($protocol !== "icmp")  $rule["ports"] = $ports;
+
+				if ($type === "inbound")  $rule["sources"] = $options2;
+				else  $rule["destinations"] = $options2;
+
+				$result[] = $rule;
+			}
+
+			return $result;
+		}
+
+		public function FirewallsCreate($name, $inboundrules, $outboundrules, $dropletids = null, $tagnames = null, $apiextra = "", $options = array())
+		{
+			if (!is_array($dropletids))  $dropletids = null;
+			if (!is_array($tagnames))  $tagnames = null;
+
+			$inboundrules = self::NormalizeFirewallRules($inboundrules, "inbound");
+			$outboundrules = self::NormalizeFirewallRules($outboundrules, "outbound");
+
+			return $this->RunAPIGetOne("POST", "firewalls" . $apiextra, "firewall", self::MakeJSONOptions(array("name" => $name, "inbound_rules" => $inboundrules, "outbound_rules" => $outboundrules, "droplet_ids" => $dropletids, "tags" => $tagnames), $options), 202);
+		}
+
+		public function FirewallsUpdate($id, $name, $inboundrules, $outboundrules, $dropletids = null, $tagnames = null, $apiextra = "", $options = array())
+		{
+			if (!is_array($dropletids))  $dropletids = null;
+			if (!is_array($tagnames))  $tagnames = null;
+
+			$inboundrules = self::NormalizeFirewallRules($inboundrules, "inbound");
+			$outboundrules = self::NormalizeFirewallRules($outboundrules, "outbound");
+
+			return $this->RunAPIGetOne("PUT", "firewalls/" . $id . $apiextra, "firewall", self::MakeJSONOptions(array("name" => $name, "inbound_rules" => $inboundrules, "outbound_rules" => $outboundrules, "droplet_ids" => $dropletids, "tags" => $tagnames), $options));
+		}
+
+		public function FirewallsGetInfo($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "firewalls/" . $id . $apiextra, "firewall", $options);
+		}
+
+		public function FirewallsDelete($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "firewalls/" . $id . $apiextra, $options);
+		}
+
 		// Images.
 		public function ImagesList($numpages = true, $apiextra = "", $options = array())
 		{
@@ -566,6 +698,33 @@
 			unset($result["action"]);
 
 			return $result;
+		}
+
+		// Load Balancers.
+		public function LoadBalancersList($numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "load_balancers" . $apiextra, "load_balancers", $numpages, $options);
+		}
+
+		public function LoadBalancersCreate($name, $region, $forwardingrules, $balanceropts = array(), $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "load_balancers" . $apiextra, "load_balancer", self::MakeJSONOptions(array_merge(array("name" => $name, "region" => $region, "forwarding_rules" => $forwardingrules), $balanceropts), $options), 202);
+		}
+
+		// Note:  The region must be the same slug used to create the load balancer.
+		public function LoadBalancersUpdate($id, $name, $region, $forwardingrules, $balanceropts = array(), $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("PUT", "load_balancers/" . $id . $apiextra, "load_balancer", self::MakeJSONOptions(array_merge(array("name" => $name, "region" => $region, "forwarding_rules" => $forwardingrules), $balanceropts), $options));
+		}
+
+		public function LoadBalancersGetInfo($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "load_balancers/" . $id . $apiextra, "load_balancer", $options);
+		}
+
+		public function LoadBalancersDelete($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "load_balancers/" . $id . $apiextra, $options);
 		}
 
 		// Snapshots.

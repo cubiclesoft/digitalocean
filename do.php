@@ -80,12 +80,15 @@
 			"actions" => "Actions",
 			"volumes" => "Volumes (Block storage)",
 			"volume-actions" => "Volume actions (Block storage)",
+			"certificates" => "Certificates (SSL/TLS)",
 			"domains" => "Domains (DNS)",
 			"domain-records" => "Domain records (DNS)",
 			"droplets" => "Droplets",
 			"droplet-actions" => "Droplet actions",
+			"firewalls" => "Firewalls",
 			"images" => "Images",
 			"image-actions" => "Image actions",
+			"load-balancers" => "Load balancers",
 			"snapshots" => "Snapshots",
 			"ssh-keys" => "SSH keys",
 			"regions" => "Regions",
@@ -109,12 +112,15 @@
 		case "actions":  $apis = array("list" => "List actions", "get-info" => "Get information about an action", "wait" => "Wait for an action to complete");  break;
 		case "volumes":  $apis = array("list" => "List Block Storage volumes", "create" => "Create a Block Storage volume", "get-info" => "Get information about a Block Storage volume", "snapshots" => "List all Block Storage volume snapshots", "snapshot" => "Create a Block Storage volume snapshot", "delete" => "Delete a Block Storage volume");  break;
 		case "volume-actions":  $apis = array("attach" => "Attach a Block Storage volume to a Droplet", "detach" => "Detach a Block Storage volume from a Droplet", "resize" => "Enlarge a Block Storage volume");  break;
+		case "certificates":  $apis = array("list" => "List registered SSL certificates", "create" => "Create/Upload a SSL certificate", "get-info" => "Get information about a SSL certificate", "delete" => "Delete a SSL certificate");  break;
 		case "domains":  $apis = array("list" => "List registered domains (DNS)", "create" => "Create a domain (TLD)", "get-info" => "Get information about a domain", "delete" => "Delete a domain and all domain records");  break;
 		case "domain-records":  $apis = array("list" => "List DNS records for a domain", "create" => "Create a domain record (A, AAAA, etc.)", "update" => "Update a domain record", "get-info" => "Get information about a domain record", "delete" => "Delete a domain record");  break;
 		case "droplets":  $apis = array("list" => "List Droplets", "create" => "Create a new Droplet", "get-info" => "Get information about a Droplet", "kernels" => "List all available kernels for a Droplet", "snapshots" => "List all Droplet snapshots", "backups" => "List all Droplet backups", "actions" => "List Droplet actions", "delete" => "Delete a single Droplet", "delete-by-tag" => "Delete all Droplets with a specific tag", "neighbors" => "List neighbors for a Droplet", "all-neighbors" => "List all neighbors for all Droplets");  break;
 		case "droplet-actions":  $apis = array("enable-backups" => "Enable backups", "disable-backups" => "Disable backups", "reboot" => "Reboot (gentle)", "power-cycle" => "Power cycle (hard reset)", "shutdown" => "Shutdown (gentle)", "power-off" => "Power off (forced shutdown)", "power-on" => "Power on", "restore" => "Restore from a backup image", "password-reset" => "Password reset", "resize" => "Resize Droplet", "rebuild" => "Recreate/Rebuild Droplet with a specific image", "rename" => "Rename", "change-kernel" => "Change Droplet kernel", "enable-ipv6" => "Enable IPv6 support", "enable-private-networking" => "Enable Shared Private Networking", "snapshot" => "Create a snapshot image");  break;
+		case "firewalls":  $apis = array("list" => "List firewalls", "create" => "Create a firewall", "update" => "Update a firewall", "add-tag" => "Adds a tag to a firewall", "remove-tag" => "Removes a tag from a firewall", "add-droplet" => "Adds a Droplet to a firewall", "remove-droplet" => "Removes a Droplet from a firewall", "get-info" => "Get information about a firewall", "delete" => "Delete a firewall");  break;
 		case "images":  $apis = array("list" => "List images (snapshots, backups, etc.)", "actions" => "List image actions", "rename" => "Rename image", "delete" => "Delete image", "get-info" => "Get information about an image");  break;
 		case "image-actions":  $apis = array("transfer" => "Transfer/Copy an image to another region", "convert" => "Convert a backup to a snapshot");  break;
+		case "load-balancers":  $apis = array("list" => "List load balancers", "create" => "Create a load balancer", "update" => "Update a load balancer", "add-forwarding-rule" => "Adds a forwarding rule to a load balancer", "remove-forwarding-rule" => "Removes a forwarding rule from a load balancer", "add-droplet" => "Adds a Droplet to a load balancer", "remove-droplet" => "Removes a Droplet from a load balancer", "get-info" => "Get information about a load balancer", "delete" => "Delete a load balancer");  break;
 		case "snapshots":  $apis = array("list" => "List snapshots", "get-info" => "Get information about a snapshot", "delete" => "Delete a snapshot");  break;
 		case "ssh-keys":  $apis = array("list" => "List SSH public keys in DigitalOcean account", "create" => "Add a SSH public key to your account", "get-info" => "Get information about a SSH public key", "rename" => "Rename a SSH public key", "delete" => "Remove a SSH public key from your account");  break;
 		case "regions":  $apis = array("list" => "List all regions");  break;
@@ -244,6 +250,49 @@
 		}
 
 		return $result;
+	}
+
+	function GetVolumeSnapshotID($volumeid)
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "snapshot"))  $id = CLI::GetUserInputWithArgs($args, "snapshot", "Snapshot ID", false, "", $suppressoutput);
+		else
+		{
+			$result = $do->VolumesSnapshotsList($volumeid);
+			if (!$result["success"])  DisplayResult($result);
+
+			$snapshots = array();
+			foreach ($result["data"] as $snapshot)
+			{
+				$snapshots[$snapshot["id"]] = $snapshot["name"] . ", " . $snapshot["size_gigabytes"] . " GB (" . implode(", ", $snapshot["regions"]) . ")";
+			}
+			if (!count($snapshots))  CLI::DisplayError("No Block Storage volume snapshots have been created.  Try creating your first Block Storage volume snapshot with the API:  volumes snapshot");
+			$id = CLI::GetLimitedUserInputWithArgs($args, "snapshot", "Snapshot ID", false, "Available Block Storage volume snapshots:", $snapshots, true, $suppressoutput);
+		}
+
+		return $id;
+	}
+
+	function GetCertificateID($default = false, $certificates = array())
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "id"))  $id = CLI::GetUserInputWithArgs($args, "id", "Certificate ID", $default, "", $suppressoutput);
+		else
+		{
+			$result = $do->CertificatesList();
+			if (!$result["success"])  DisplayResult($result);
+
+			foreach ($result["data"] as $certificate)
+			{
+				$certificates[$certificate["id"]] = $certificate["name"] . " (" . implode(", ", $certificate["dns_names"]) . ")";
+			}
+			if (!count($certificates))  CLI::DisplayError("No SSL certificates have been created.  Try creating your first SSL certificate with the API:  certificates create");
+			$id = CLI::GetLimitedUserInputWithArgs($args, "id", "Certificate ID", $default, "Available SSL certificates:", $certificates, true, $suppressoutput);
+		}
+
+		return $id;
 	}
 
 	function GetDomainName($arg)
@@ -403,6 +452,91 @@
 		return $result;
 	}
 
+	function GetFirewallID()
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "id"))
+		{
+			$id = CLI::GetUserInputWithArgs($args, "id", "Firewall ID", false, "", $suppressoutput);
+
+			$result = $do->FirewallsGetInfo($id);
+			if (!$result["success"])  DisplayResult($result);
+		}
+		else
+		{
+			$result = $do->FirewallsList();
+			if (!$result["success"])  DisplayResult($result);
+
+			$ids = array();
+			$ids2 = array();
+			foreach ($result["data"] as $firewall)
+			{
+				$opts = array();
+
+				if (count($firewall["inbound_rules"]) == 1)  $opts[] = "1 inbound rule";
+				else if (count($firewall["inbound_rules"]) == 0)  $opts[] = "No inbound rules";
+				else  $opts[] = count($firewall["inbound_rules"]) . " inbound rules";
+
+				if (count($firewall["outbound_rules"]) == 1)  $opts[] = "1 outbound rule";
+				else if (count($firewall["outbound_rules"]) == 0)  $opts[] = "No outbound rules";
+				else  $opts[] = count($firewall["outbound_rules"]) . " outbound rules";
+
+				if (count($firewall["droplet_ids"]) == 1)  $opts[] = "1 Droplet";
+				else if (count($firewall["droplet_ids"]) == 0)  $opts[] = "No Droplets";
+				else  $opts[] = count($firewall["droplet_ids"]) . " Droplets";
+
+				if (count($firewall["tags"]) == 1)  $opts[] = "1 tag";
+				else if (count($firewall["tags"]) == 0)  $opts[] = "No tags";
+				else  $opts[] = count($firewall["tags"]) . " tags";
+
+				if (count($firewall["pending_changes"]) == 1)  $opts[] = "1 pending change";
+				else if (count($firewall["pending_changes"]) != 0)  $opts[] = count($firewall["pending_changes"]) . " pending changes";
+
+				$ids[$firewall["id"]] = $firewall["name"] . ", " . $firewall["status"] . " (" . implode(", ", $opts) . ")";
+				$ids2[$firewall["id"]] = $firewall;
+			}
+			if (!count($ids))  CLI::DisplayError("No firewalls have been created.  Try creating your first firewall with the API:  firewalls create");
+			$id = CLI::GetLimitedUserInputWithArgs($args, "id", "Firewall ID", false, "Available Firewalls:", $ids, true, $suppressoutput);
+			unset($result["data"]);
+			$result["firewall"] = $ids2[$id];
+		}
+
+		return $result;
+	}
+
+	function GetLoadBalancerID()
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "id"))
+		{
+			$id = CLI::GetUserInputWithArgs($args, "id", "Load balancer ID", false, "", $suppressoutput);
+
+			$result = $do->LoadBalancersGetInfo($id);
+			if (!$result["success"])  DisplayResult($result);
+		}
+		else
+		{
+			$result = $do->LoadBalancersList();
+			if (!$result["success"])  DisplayResult($result);
+
+			$ids = array();
+			$ids2 = array();
+			foreach ($result["data"] as $loadbalancer)
+			{
+				$ids[$loadbalancer["id"]] = $loadbalancer["name"] . ", " . $loadbalancer["ip"] . ", " . $loadbalancer["region"]["name"] . ", " . $loadbalancer["status"] . " (" . ($loadbalancer["tag"] !== "" ? $loadbalancer["tag"] : count($loadbalancer["droplet_ids"]) . " Droplets") . ")";
+				$ids2[$loadbalancer["id"]] = $loadbalancer;
+			}
+			if (!count($ids))  CLI::DisplayError("No load balancers have been created.  Try creating your first load balancer with the API:  load-balancers create");
+			$id = CLI::GetLimitedUserInputWithArgs($args, "id", "Load balancer ID", false, "Available load balancers:", $ids, true, $suppressoutput);
+			unset($result["data"]);
+			$result["load_balancer"] = $ids2[$id];
+		}
+
+		return $result;
+	}
+
 	function GetFloatingIPAddr()
 	{
 		global $suppressoutput, $args, $do;
@@ -518,10 +652,44 @@
 			$size = (int)CLI::GetUserInputWithArgs($args, "size", "Size (in GB)", "1", "DigitalOcean Block Storage is approximately \$0.10 USD/month per GB.", $suppressoutput);
 			if ($size < 1)  $size = 1;
 
-			// Get supported Droplet region.
-			$region = GetDropletRegion("Block Storage region", false, false, false, false, true, "");
+			$modes = array(
+				"region" => "New Block Storage volume by region",
+				"snapshot" => "Block Storage volume snapshot"
+			);
+			$mode = CLI::GetLimitedUserInputWithArgs($args, "mode", "Mode", "region", "Available volume creation modes:", $modes, true, $suppressoutput);
 
-			DisplayResult($do->VolumesCreate($name, $desc, $size, $region));
+			$volumeopts = array();
+			if ($mode === "region")
+			{
+				// Get supported Droplet region.
+				$region = GetDropletRegion("Block Storage region", false, false, false, false, true, "");
+				$modeopts["region"] = $region;
+			}
+			else
+			{
+				$result = GetVolumeID();
+				$id = $result["volume"]["id"];
+
+				$snapshotid = GetVolumeSnapshotID($id);
+				$volumeopts["snapshot_id"] = $snapshotid;
+			}
+
+			// Note:  Attaching pre-formatted volumes to Droplets created before April 26, 2018 is not recommended.
+			$fstypes = array(
+				"" => "Unformatted",
+				"ext4" => "ext4",
+				"xfs" => "xfs"
+			);
+			$fstype = CLI::GetLimitedUserInputWithArgs($args, "fstype", "Filesystem type", "", "Available filesystem types:", $fstypes, true, $suppressoutput);
+			$volumeopts["filesystem_type"] = $fstype;
+
+			if ($fstype !== "")
+			{
+				$fslabel = CLI::GetUserInputWithArgs($args, "fslabel", "Filesystem label", "", "Labels for ext4 may contain 16 characters while xfs may contain 12 characters.", $suppressoutput);
+				$volumeopts["filesystem_label"] = $fslabel;
+			}
+
+			DisplayResult($do->VolumesCreate($name, $desc, $size, $volumeopts));
 		}
 		else
 		{
@@ -570,6 +738,97 @@
 
 		DisplayResult($do->VolumeActionsByID($id, $api, $actionvalues), $wait, $defaultwait, $initwait);
 	}
+	else if ($apigroup === "certificates")
+	{
+		// Certificates.
+		if ($api === "list")  DisplayResult($do->CertificatesList());
+		else if ($api === "create")
+		{
+			$name = CLI::GetUserInputWithArgs($args, "name", "Certificate name", false, "", $suppressoutput);
+
+			$types = array(
+				"custom" => "Custom",
+				"lets_encrypt" => "Let's Encrypt"
+			);
+			$type = CLI::GetLimitedUserInputWithArgs($args, "type", "Certificate type", "custom", "Available certificate types:", $types, true, $suppressoutput);
+
+			$typevalues = array();
+			if ($type === "lets_encrypt")
+			{
+				$dnsnames = array();
+				do
+				{
+					$name = CLI::GetUserInputWithArgs($args, "dnsname", (count($dnsnames) ? "Another DNS name" : "DNS name"), "", "", $suppressoutput);
+					if ($name !== "")  $dnsnames[] = $name;
+				} while ($name !== "");
+
+				$typevalues["dns_names"] = $dnsnames;
+			}
+			else
+			{
+				do
+				{
+					$valid = false;
+					$filename = CLI::GetUserInputWithArgs($args, "privatekey", "Private key filename", false, "", $suppressoutput);
+					if (!file_exists($filename))  CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
+					else
+					{
+						$privatekey = file_get_contents($filename);
+
+						$valid = true;
+					}
+				} while (!$valid);
+
+				do
+				{
+					$valid = false;
+					$filename = CLI::GetUserInputWithArgs($args, "publickey", "Public key filename", false, "", $suppressoutput);
+					if (!file_exists($filename))  CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
+					else
+					{
+						$publickey = file_get_contents($filename);
+
+						$valid = true;
+					}
+				} while (!$valid);
+
+				do
+				{
+					$valid = false;
+					$filename = CLI::GetUserInputWithArgs($args, "certchain", "Certificate chain filename", "", "", $suppressoutput);
+					if ($filename === "")
+					{
+						$certchain = false;
+
+						$valid = true;
+					}
+					else if (!file_exists($filename))
+					{
+						CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
+					}
+					else
+					{
+						$certchain = file_get_contents($filename);
+
+						$valid = true;
+					}
+				} while (!$valid);
+
+				$typevalues["private_key"] = $privatekey;
+				$typevalues["leaf_certificate"] = $publickey;
+				$typevalues["certificate_chain"] = $certchain;
+			}
+
+			DisplayResult($do->CertificatesCreate($name, $type, $typevalues));
+		}
+		else
+		{
+			$id = GetCertificateID();
+
+			if ($api === "get-info")  DisplayResult($do->CertificatesGetInfo($id));
+			else if ($api === "delete")  DisplayResult($do->CertificatesDelete($id));
+		}
+	}
 	else if ($apigroup === "domains")
 	{
 		// Domains.
@@ -577,9 +836,9 @@
 		else if ($api === "create")
 		{
 			$name = CLI::GetUserInputWithArgs($args, "name", "Domain name (TLD, no subdomains)", false, "", $suppressoutput);
-			$ipaddr = CLI::GetUserInputWithArgs($args, "ip", "IP address to point the domain to", false, "", $suppressoutput);
+			$ipaddr = CLI::GetUserInputWithArgs($args, "ip", "IP address to point the domain to", "", "", $suppressoutput);
 
-			DisplayResult($do->DomainsCreate($name, $ipaddr));
+			DisplayResult($do->DomainsCreate($name, ($ipaddr !== "" ? $ipaddr : null)));
 		}
 		else
 		{
@@ -965,6 +1224,176 @@
 		if ($mode === "id")  DisplayResult($do->DropletActionsByID($id, $api, $actionvalues), $wait, $defaultwait, $initwait);
 		else if ($mode === "tag")  DisplayResult($do->DropletActionsByTag($tagname, $api, $actionvalues), $wait, $defaultwait, $initwait);
 	}
+	else if ($apigroup === "firewalls")
+	{
+		// Firewalls.
+		if ($api === "list")  DisplayResult($do->FirewallsList());
+		else if ($api === "create")
+		{
+			$name = CLI::GetUserInputWithArgs($args, "name", "Firewall name", false, "", $suppressoutput);
+
+			do
+			{
+				do
+				{
+					$valid = false;
+					$filename = CLI::GetUserInputWithArgs($args, "inboundrules", "Inbound rules filename", false, "", $suppressoutput);
+					if (!file_exists($filename))  CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
+					else
+					{
+						$inboundrules = json_decode(file_get_contents($filename), true);
+
+						if (!is_array($inboundrules))  CLI::DisplayError("The file '" . $filename . "' does not contain valid JSON.", false, false);
+						else
+						{
+							$inboundrules = $do->NormalizeFirewallRules($inboundrules, "inbound");
+
+							$valid = true;
+						}
+					}
+				} while (!$valid);
+
+				do
+				{
+					$valid = false;
+					$filename = CLI::GetUserInputWithArgs($args, "outboundrules", "Outbound rules filename", false, "", $suppressoutput);
+					if (!file_exists($filename))  CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
+					else
+					{
+						$outboundrules = json_decode(file_get_contents($filename), true);
+
+						if (!is_array($outboundrules))  CLI::DisplayError("The file '" . $filename . "' does not contain valid JSON.", false, false);
+						else
+						{
+							$outboundrules = $do->NormalizeFirewallRules($outboundrules, "outbound");
+
+							$valid = true;
+						}
+					}
+				} while (!$valid);
+
+				if (!count($inboundrules) && !count($outboundrules))  CLI::DisplayError("At least one valid inbound or outbound rule must be specified.", false, false);
+
+			} while (!count($inboundrules) && !count($outboundrules));
+
+			DisplayResult($do->FirewallsCreate($name, $inboundrules, $outboundrules));
+		}
+		else
+		{
+			$result = GetFirewallID();
+			$id = $result["firewall"]["id"];
+			$info = $result["firewall"];
+
+			if ($api === "get-info")  DisplayResult($result);
+			else if ($api === "delete")  DisplayResult($do->FirewallsDelete($id));
+			else if ($api === "update")
+			{
+				$name = CLI::GetUserInputWithArgs($args, "name", "Firewall name", $info["name"], "", $suppressoutput);
+
+				do
+				{
+					do
+					{
+						$valid = false;
+						$filename = CLI::GetUserInputWithArgs($args, "inboundrules", "Inbound rules filename", "", "", $suppressoutput);
+						if ($filename === "")
+						{
+							$inboundrules = $info["inbound_rules"];
+
+							$valid = true;
+						}
+						else if (!file_exists($filename))
+						{
+							CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
+						}
+						else
+						{
+							$inboundrules = json_decode(file_get_contents($filename), true);
+
+							if (!is_array($inboundrules))  CLI::DisplayError("The file '" . $filename . "' does not contain valid JSON.", false, false);
+							else
+							{
+								$inboundrules = $do->NormalizeFirewallRules($inboundrules, "inbound");
+
+								$valid = true;
+							}
+						}
+					} while (!$valid);
+
+					do
+					{
+						$valid = false;
+						$filename = CLI::GetUserInputWithArgs($args, "outboundrules", "Outbound rules filename", "", "", $suppressoutput);
+						if ($filename === "")
+						{
+							$outboundrules = $info["outbound_rules"];
+
+							$valid = true;
+						}
+						else if (!file_exists($filename))
+						{
+							CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
+						}
+						else
+						{
+							$outboundrules = json_decode(file_get_contents($filename), true);
+
+							if (!is_array($outboundrules))  CLI::DisplayError("The file '" . $filename . "' does not contain valid JSON.", false, false);
+							else
+							{
+								$outboundrules = $do->NormalizeFirewallRules($outboundrules, "outbound");
+
+								$valid = true;
+							}
+						}
+					} while (!$valid);
+
+					if (!count($inboundrules) && !count($outboundrules))  CLI::DisplayError("At least one valid inbound or outbound rule must be specified.", false, false);
+
+				} while (!count($inboundrules) && !count($outboundrules));
+
+				DisplayResult($do->FirewallsUpdate($id, $name, $inboundrules, $outboundrules, $info["droplet_ids"], $info["tags"]));
+			}
+			else if ($api === "add-tag")
+			{
+				$result = GetTagName();
+				$tagname = $result["tag"]["name"];
+
+				if (!in_array($tagname, $info["tags"]))  $info["tags"][] = $tagname;
+
+				DisplayResult($do->FirewallsUpdate($id, $info["name"], $info["inbound_rules"], $info["outbound_rules"], $info["droplet_ids"], $info["tags"]));
+			}
+			else if ($api === "remove-tag")
+			{
+				$result = GetTagName();
+				$tagname = $result["tag"]["name"];
+
+				$pos = array_search($tagname, $info["tags"]);
+				if ($pos !== false)  array_splice($info["tags"], $pos, 1);
+
+				DisplayResult($do->FirewallsUpdate($id, $info["name"], $info["inbound_rules"], $info["outbound_rules"], $info["droplet_ids"], $info["tags"]));
+			}
+			else if ($api === "add-droplet")
+			{
+				$result = GetDropletID();
+				$dropletid = $result["droplet"]["id"];
+
+				if (!in_array($dropletid, $info["droplet_ids"]))  $info["droplet_ids"][] = $dropletid;
+
+				DisplayResult($do->FirewallsUpdate($id, $info["name"], $info["inbound_rules"], $info["outbound_rules"], $info["droplet_ids"], $info["tags"]));
+			}
+			else if ($api === "remove-droplet")
+			{
+				$result = GetDropletID();
+				$dropletid = $result["droplet"]["id"];
+
+				$pos = array_search($dropletid, $info["droplet_ids"]);
+				if ($pos !== false)  array_splice($info["droplet_ids"], $pos, 1);
+
+				DisplayResult($do->FirewallsUpdate($id, $info["name"], $info["inbound_rules"], $info["outbound_rules"], $info["droplet_ids"], $info["tags"]));
+			}
+		}
+	}
 	else if ($apigroup === "images")
 	{
 		// Images.
@@ -1034,6 +1463,324 @@
 		$wait = CLI::GetYesNoUserInputWithArgs($args, "wait", "Wait for completion", "Y", "The next question involves whether or not to wait for the Image action to complete.  If you don't want to wait, you can use the 'action' ID that is returned to wait later on for completion of the task.", $suppressoutput);
 
 		DisplayResult($do->ImageActionsByID($image, $api, $actionvalues), $wait, $defaultwait, $initwait);
+	}
+	else if ($apigroup === "load-balancers")
+	{
+		// Load balancers.
+		if ($api === "list")  DisplayResult($do->LoadBalancersList());
+		else if ($api === "create")
+		{
+			$name = CLI::GetUserInputWithArgs($args, "name", "Load balancer name", false, "", $suppressoutput);
+
+			$region = GetDropletRegion("Load balancer region", false, false, false, false, false, "");
+
+			// Forwarding rule.
+			$protocols = array(
+				"http" => "HTTP",
+				"https" => "HTTPS",
+				"http2" => "HTTP/2",
+				"tcp" => "TCP"
+			);
+
+			$entryproto = CLI::GetLimitedUserInputWithArgs($args, "entryproto", "Entry protocol", false, "The next few questions setup the first forwarding rule for the load balancer.  Available entry protocols:", $protocols, true, $suppressoutput);
+
+			if ($entryproto === "http")  $entryport = 80;
+			else if ($entryproto === "https" || $entryproto === "http2")  $entryport = 443;
+			else  $entryport = false;
+
+			do
+			{
+				$entryport = (int)CLI::GetUserInputWithArgs($args, "entryport", "Entry port", $entryport, "", $suppressoutput);
+			} while ($entryport < 0 || $entryport > 65535);
+
+			$targetproto = CLI::GetLimitedUserInputWithArgs($args, "targetproto", "Target protocol", $entryproto, "Available target protocols:", $protocols, true, $suppressoutput);
+
+			do
+			{
+				$targetport = (int)CLI::GetUserInputWithArgs($args, "targetport", "Target port", $entryport, "", $suppressoutput);
+			} while ($targetport < 0 || $targetport > 65535);
+
+			if ($entryproto === "https" || $entryproto === "http2")
+			{
+				$certid = GetCertificateID("-", array("-" => "None"));
+				$tlspassthrough = ($certid === "");
+			}
+			else
+			{
+				$certid = "";
+				$tlspassthrough = false;
+			}
+
+			$forwardingrules = array(
+				array(
+					"entry_protocol" => $entryproto,
+					"entry_port" => $entryport,
+					"target_protocol" => $targetproto,
+					"target_port" => $targetport,
+					"certificate_id" => $certid,
+					"tls_passthrough" => $tlspassthrough
+				)
+			);
+
+			$algorithms = array(
+				"round_robin" => "Round-robin",
+				"least_connections" => "Least connections"
+			);
+
+			$algorithm = CLI::GetLimitedUserInputWithArgs($args, "algorithm", "Balancing algorithm", "round_robin", "Available balancing algorithms:", $algorithms, true, $suppressoutput);
+
+			// Health check setup.
+			$healthcheck = array();
+			$protocols = array(
+				"http" => "HTTP",
+				"tcp" => "TCP"
+			);
+
+			$healthcheck["protocol"] = CLI::GetLimitedUserInputWithArgs($args, "healthproto", "Health check protocol", ($targetproto === "http" ? "http" : "tcp"), "The next few questions setup the health check for the load balancer.  Available health check protocols:", $protocols, true, $suppressoutput);
+
+			if ($healthcheck["protocol"] === "http")  $healthport = 80;
+			else  $healthport = false;
+
+			$healthcheck["port"] = (int)CLI::GetUserInputWithArgs($args, "healthport", "Health check port", $healthport, "", $suppressoutput);
+			$healthcheck["path"] = CLI::GetUserInputWithArgs($args, "healthpath", "Health check path", "/", "", $suppressoutput);
+			$healthcheck["check_interval_seconds"] = (int)CLI::GetUserInputWithArgs($args, "healthinterval", "Health check interval", "10", "", $suppressoutput);
+			$healthcheck["response_timeout_seconds"] = (int)CLI::GetUserInputWithArgs($args, "healthtimeout", "Health check timeout", "5", "The number of seconds the Load Balancer instance will wait for a response until marking a health check as failed.", $suppressoutput);
+			$healthcheck["unhealthy_threshold"] = (int)CLI::GetUserInputWithArgs($args, "healthfail", "Health check failure threshold", "3", "The number of times a health check must fail for a backend Droplet to be marked 'unhealthy' and be removed from the pool.", $suppressoutput);
+			$healthcheck["healthy_threshold"] = (int)CLI::GetUserInputWithArgs($args, "healthpass", "Health check passing threshold", "5", "The number of times a health check must pass for a backend Droplet to be marked 'healthy' and be re-added to the pool.", $suppressoutput);
+
+			// Sticky sessions setup.
+			$stickysessions = array();
+			$stickytypes = array(
+				"none" => "None",
+				"cookies" => "HTTP cookies"
+			);
+
+			$stickysessions["type"] = CLI::GetLimitedUserInputWithArgs($args, "stickytype", "Sticky session type", "none", "The next few questions setup the sticky session options for the load balancer, which allow the load balancer to pass traffic onto the same backend for each request by a client.  Note that for sticky cookie sessions to work, the load balancer has to decrypt all traffic.  Available sticky session types:", $stickytypes, true, $suppressoutput);
+
+			if ($stickytype === "cookies")
+			{
+				$stickysessions["cookie_name"] = CLI::GetUserInputWithArgs($args, "stickycookie", "Sticky cookie name", "LB_DO", "", $suppressoutput);
+				$stickysessions["cookie_ttl_seconds"] = CLI::GetUserInputWithArgs($args, "stickycookiettl", "Sticky cookie TTL", "600", "The TTL is the amount of time, in seconds, that sticky cookies will be valid for.", $suppressoutput);
+			}
+
+			// Balancer options.
+			$balanceropts = array(
+				"algorithm" => $algorithm,
+				"health_check" => $healthcheck,
+				"sticky_sessions" => $stickysessions
+			);
+
+			// Load balnacer mode.
+			$modes = array(
+				"tag" => "Tag",
+				"droplets" => "Droplets"
+			);
+
+			$mode = CLI::GetLimitedUserInputWithArgs($args, "mode", "Load balancer mode", "tag", "The load balancer can operate in either Droplet or tag mode.  Using tag mode is highly recommended for simplified management of Droplets.  Available load balancer modes:", $modes, true, $suppressoutput);
+
+			if ($mode === "tag")
+			{
+				$result = GetTagName();
+				$balanceropts["tag"] = $result["tag"]["name"];
+			}
+			else if ($mode === "droplets")
+			{
+				$result = GetDropletID("", $region);
+				$balanceropts["droplet_ids"] = array($result["droplet"]["id"]);
+			}
+
+			DisplayResult($do->LoadBalancersCreate($name, $region, $forwardingrules, $balanceropts));
+		}
+		else
+		{
+			$result = GetLoadBalancerID();
+			$id = $result["load_balancer"]["id"];
+			$info = $result["load_balancer"];
+
+			if ($api === "get-info")  DisplayResult($result);
+			else if ($api === "delete")  DisplayResult($do->LoadBalancersDelete($id));
+			else if ($api === "update")
+			{
+				$name = CLI::GetUserInputWithArgs($args, "name", "Load balancer name", $info["name"], "", $suppressoutput);
+
+				$algorithms = array(
+					"round_robin" => "Round-robin",
+					"least_connections" => "Least connections"
+				);
+
+				$algorithm = CLI::GetLimitedUserInputWithArgs($args, "algorithm", "Balancing algorithm", $info["algorithm"], "Available balancing algorithms:", $algorithms, true, $suppressoutput);
+
+				// Health check setup.
+				$healthcheck = array();
+				$protocols = array(
+					"http" => "HTTP",
+					"tcp" => "TCP"
+				);
+
+				$healthcheck["protocol"] = CLI::GetLimitedUserInputWithArgs($args, "healthproto", "Health check protocol", $info["health_check"]["protocol"], "The next few questions setup the health check for the load balancer.  Available health check protocols:", $protocols, true, $suppressoutput);
+				$healthcheck["port"] = (int)CLI::GetUserInputWithArgs($args, "healthport", "Health check port", $info["health_check"]["port"], "", $suppressoutput);
+				$healthcheck["path"] = CLI::GetUserInputWithArgs($args, "healthpath", "Health check path", $info["health_check"]["path"], "", $suppressoutput);
+				$healthcheck["check_interval_seconds"] = (int)CLI::GetUserInputWithArgs($args, "healthinterval", "Health check interval", $info["health_check"]["check_interval_seconds"], "", $suppressoutput);
+				$healthcheck["response_timeout_seconds"] = (int)CLI::GetUserInputWithArgs($args, "healthtimeout", "Health check timeout", $info["health_check"]["response_timeout_seconds"], "The number of seconds the Load Balancer instance will wait for a response until marking a health check as failed.", $suppressoutput);
+				$healthcheck["unhealthy_threshold"] = (int)CLI::GetUserInputWithArgs($args, "healthfail", "Health check failure threshold", $info["health_check"]["unhealthy_threshold"], "The number of times a health check must fail for a backend Droplet to be marked 'unhealthy' and be removed from the pool.", $suppressoutput);
+				$healthcheck["healthy_threshold"] = (int)CLI::GetUserInputWithArgs($args, "healthpass", "Health check passing threshold", $info["health_check"]["healthy_threshold"], "The number of times a health check must pass for a backend Droplet to be marked 'healthy' and be re-added to the pool.", $suppressoutput);
+
+				// Sticky sessions setup.
+				$stickysessions = array();
+				$stickytypes = array(
+					"none" => "None",
+					"cookies" => "HTTP cookies"
+				);
+
+				$stickysessions["type"] = CLI::GetLimitedUserInputWithArgs($args, "stickytype", "Sticky session type", $info["sticky_sessions"]["type"], "The next few questions setup the sticky session options for the load balancer, which allow the load balancer to pass traffic onto the same backend for each request by a client.  Note that for sticky cookie sessions to work, the load balancer has to decrypt all traffic.  Available sticky session types:", $stickytypes, true, $suppressoutput);
+
+				if ($stickysessions["type"] === "cookies")
+				{
+					$stickysessions["cookie_name"] = CLI::GetUserInputWithArgs($args, "stickycookie", "Sticky cookie name", (isset($info["sticky_sessions"]["cookie_name"]) ? $info["sticky_sessions"]["cookie_name"] : "LB_DO"), "", $suppressoutput);
+					$stickysessions["cookie_ttl_seconds"] = CLI::GetUserInputWithArgs($args, "stickycookiettl", "Sticky cookie TTL", (isset($info["sticky_sessions"]["cookie_ttl_seconds"]) ? $info["sticky_sessions"]["cookie_ttl_seconds"] : "600"), "The TTL is the amount of time, in seconds, that sticky cookies will be valid for.", $suppressoutput);
+				}
+
+				// Balancer options.
+				$balanceropts = array(
+					"algorithm" => $algorithm,
+					"health_check" => $healthcheck,
+					"sticky_sessions" => $stickysessions,
+					"redirect_http_to_https" => $info["redirect_http_to_https"]
+				);
+
+				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
+				else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
+
+				DisplayResult($do->LoadBalancersUpdate($id, $name, $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
+			}
+			else if ($api === "add-forwarding-rule")
+			{
+				$protocols = array(
+					"http" => "HTTP",
+					"https" => "HTTPS",
+					"http2" => "HTTP/2",
+					"tcp" => "TCP"
+				);
+
+				$entryproto = CLI::GetLimitedUserInputWithArgs($args, "entryproto", "Entry protocol", false, "Available entry protocols:", $protocols, true, $suppressoutput);
+
+				if ($entryproto === "http")  $entryport = 80;
+				else if ($entryproto === "https" || $entryproto === "http2")  $entryport = 443;
+				else  $entryport = false;
+
+				do
+				{
+					$entryport = (int)CLI::GetUserInputWithArgs($args, "entryport", "Entry port", $entryport, "", $suppressoutput);
+				} while ($entryport < 0 || $entryport > 65535);
+
+				$targetproto = CLI::GetLimitedUserInputWithArgs($args, "targetproto", "Target protocol", $entryproto, "Available target protocols:", $protocols, true, $suppressoutput);
+
+				do
+				{
+					$targetport = (int)CLI::GetUserInputWithArgs($args, "targetport", "Target port", $entryport, "", $suppressoutput);
+				} while ($targetport < 0 || $targetport > 65535);
+
+				if ($entryproto === "https" || $entryproto === "http2")
+				{
+					$certid = GetCertificateID("-", array("-" => "None"));
+					$tlspassthrough = ($certid === "");
+				}
+				else
+				{
+					$certid = "";
+					$tlspassthrough = false;
+				}
+
+				$info["forwarding_rules"][] = array(
+					"entry_protocol" => $entryproto,
+					"entry_port" => $entryport,
+					"target_protocol" => $targetproto,
+					"target_port" => $targetport,
+					"certificate_id" => $certid,
+					"tls_passthrough" => $tlspassthrough
+				);
+
+				// Balancer options.
+				$balanceropts = array(
+					"algorithm" => $info["algorithm"],
+					"health_check" => $info["health_check"],
+					"sticky_sessions" => $info["sticky_sessions"],
+					"redirect_http_to_https" => $info["redirect_http_to_https"]
+				);
+
+				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
+				else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
+
+				DisplayResult($do->LoadBalancersUpdate($id, $info["name"], $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
+			}
+			else if ($api === "remove-forwarding-rule")
+			{
+				$rules = array();
+				foreach ($info["forwarding_rules"] as $num => $rule)
+				{
+					$rules[$num + 1] = $rule["entry_protocol"] . ":" . $rule["entry_port"] . " => " . $rule["target_protocol"] . ":" . $rule["target_port"];
+				}
+
+				$num = CLI::GetLimitedUserInputWithArgs($args, "rule", "Forwarding rule", false, "Available load balancer forwarding rules:", $rules, true, $suppressoutput);
+				$num--;
+
+				if (isset($info["forwarding_rules"][$num]))  array_splice($info["forwarding_rules"], $num, 1);
+
+				// Balancer options.
+				$balanceropts = array(
+					"algorithm" => $info["algorithm"],
+					"health_check" => $info["health_check"],
+					"sticky_sessions" => $info["sticky_sessions"],
+					"redirect_http_to_https" => $info["redirect_http_to_https"]
+				);
+
+				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
+				else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
+
+				DisplayResult($do->LoadBalancersUpdate($id, $info["name"], $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
+			}
+			else if ($api === "add-droplet")
+			{
+				$result = GetDropletID("", $info["region"]["slug"]);
+				$dropletid = $result["droplet"]["id"];
+
+				if (!in_array($dropletid, $info["droplet_ids"]))  $info["droplet_ids"][] = $dropletid;
+
+				// Balancer options.
+				$balanceropts = array(
+					"algorithm" => $info["algorithm"],
+					"health_check" => $info["health_check"],
+					"sticky_sessions" => $info["sticky_sessions"],
+					"redirect_http_to_https" => $info["redirect_http_to_https"]
+				);
+
+				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
+				else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
+
+				DisplayResult($do->LoadBalancersUpdate($id, $info["name"], $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
+			}
+			else if ($api === "remove-droplet")
+			{
+				$result = GetDropletID("", $info["region"]["slug"]);
+				$dropletid = $result["droplet"]["id"];
+
+				$pos = array_search($dropletid, $info["droplet_ids"]);
+				if ($pos !== false)  array_splice($info["droplet_ids"], $pos, 1);
+
+				// Balancer options.
+				$balanceropts = array(
+					"algorithm" => $info["algorithm"],
+					"health_check" => $info["health_check"],
+					"sticky_sessions" => $info["sticky_sessions"],
+					"redirect_http_to_https" => $info["redirect_http_to_https"]
+				);
+
+				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
+				else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
+
+				DisplayResult($do->LoadBalancersUpdate($id, $info["name"], $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
+			}
+		}
 	}
 	else if ($apigroup === "snapshots")
 	{
