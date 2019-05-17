@@ -52,7 +52,7 @@ php do.php droplets list
 
 php do.php droplets create
 
-php do.php -s droplets create name=mydroplet size=512mb backups=N ipv6=Y private_network=N storage=N userdata= region=nyc1 image=ubuntu-16-04-x64 ssh_key=123456 ssh_key=123457 ssh_key= wait=Y
+php do.php -s droplets create -name mydroplet -size 512mb -backups N -ipv6 Y -private_network N -storage N -userdata '' -region nyc1 -image ubuntu-16-04-x64 -ssh_key 123456 -ssh_key 123457 -ssh_key '' -wait Y
 ````
 
 The -s option suppresses normal output (except for fatal error conditions), which allows for the processed JSON result to be the only thing that is output.
@@ -124,6 +124,6 @@ You will, of course, have to adjust code accordingly.
 DigitalOcean API Changelog
 --------------------------
 
-The API changes regularly.  You can safely assume that both this SDK and command-line tool mirrors the API as per the most recent commit date to this repository versus the DigitalOcean API changelog:
+The API changes regularly.  You can safely assume that both this SDK and command-line tool mirrors the stable API (i.e. not in a beta program) as per the most recent commit date in this repository when compared to the DigitalOcean API changelog:
 
 https://developers.digitalocean.com/documentation/changelog/
