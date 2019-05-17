@@ -111,7 +111,7 @@
 		$default = false;
 	}
 
-	$apigroup = CLI::GetLimitedUserInputWithArgs($args, "apigroup", "API group", $default, "Available API groups:", $apigroups, true, $suppressoutput);
+	$apigroup = CLI::GetLimitedUserInputWithArgs($args, false, "API group", $default, "Available API groups:", $apigroups, true, $suppressoutput);
 
 	// Get the API.
 	switch ($apigroup)
@@ -148,7 +148,7 @@
 		case "metadata-droplet":  $apis = array("get-info" => "Get information about the Droplet (see Metadata API and Cloud Config tutorials)");  break;
 	}
 
-	if ($apigroup !== "setup")  $api = CLI::GetLimitedUserInputWithArgs($args, "api", "API", false, "Available APIs:", $apis, true, $suppressoutput);
+	if ($apigroup !== "setup")  $api = CLI::GetLimitedUserInputWithArgs($args, false, "API", false, "Available APIs:", $apis, true, $suppressoutput);
 
 	function DisplayResult($result, $wait = true, $defaultwait = 5, $initwait = array())
 	{
