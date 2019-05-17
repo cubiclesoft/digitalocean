@@ -1,6 +1,6 @@
 <?php
 	// DigitalOcean command-line shell for managing droplets.
-	// (C) 2017 CubicleSoft.  All Rights Reserved.
+	// (C) 2019 CubicleSoft.  All Rights Reserved.
 
 	if (!isset($_SERVER["argc"]) || !$_SERVER["argc"])
 	{
@@ -29,7 +29,7 @@
 			"suppressoutput" => array("arg" => false),
 			"help" => array("arg" => false)
 		),
-		"userinput" => "="
+		"allow_opts_after_param" => false
 	);
 	$args = CLI::ParseCommandLine($options);
 
@@ -48,8 +48,8 @@
 		echo "\n";
 		echo "Examples:\n";
 		echo "\tphp " . $args["file"] . "\n";
-		echo "\tphp " . $args["file"] . " droplets create name=test\n";
-		echo "\tphp " . $args["file"] . " -c=altconfig.dat -s account get-info\n";
+		echo "\tphp " . $args["file"] . " droplets create -name test\n";
+		echo "\tphp " . $args["file"] . " -c altconfig.dat -s account get-info\n";
 
 		exit();
 	}
@@ -80,7 +80,13 @@
 			"actions" => "Actions",
 			"volumes" => "Volumes (Block storage)",
 			"volume-actions" => "Volume actions (Block storage)",
+			"cdn-endpoints" => "Content Delivery Network (CDN) endpoints",
 			"certificates" => "Certificates (SSL/TLS)",
+			"database-clusters" => "Database clusters",
+			"database-replicas" => "Database read-only replicas",
+			"database-users" => "Database users",
+			"databases" => "Databases in a database cluster",
+			"database-pools" => "Database connection pools",
 			"domains" => "Domains (DNS)",
 			"domain-records" => "Domain records (DNS)",
 			"droplets" => "Droplets",
@@ -89,6 +95,8 @@
 			"images" => "Images",
 			"image-actions" => "Image actions",
 			"load-balancers" => "Load balancers",
+			"projects" => "Projects",
+			"project-resources" => "Project resources",
 			"snapshots" => "Snapshots",
 			"ssh-keys" => "SSH keys",
 			"regions" => "Regions",
@@ -112,15 +120,23 @@
 		case "actions":  $apis = array("list" => "List actions", "get-info" => "Get information about an action", "wait" => "Wait for an action to complete");  break;
 		case "volumes":  $apis = array("list" => "List Block Storage volumes", "create" => "Create a Block Storage volume", "get-info" => "Get information about a Block Storage volume", "snapshots" => "List all Block Storage volume snapshots", "snapshot" => "Create a Block Storage volume snapshot", "delete" => "Delete a Block Storage volume");  break;
 		case "volume-actions":  $apis = array("attach" => "Attach a Block Storage volume to a Droplet", "detach" => "Detach a Block Storage volume from a Droplet", "resize" => "Enlarge a Block Storage volume");  break;
+		case "cdn-endpoints":  $apis = array("list" => "List CDN endpoints", "create" => "Create a CDN endpoint", "update" => "Update a CDN endpoint", "get-info" => "Get information about a CDN endpoint", "purge" => "Purge CDN endpoint cache", "delete" => "Delete a CDN endpoint");  break;
 		case "certificates":  $apis = array("list" => "List registered SSL certificates", "create" => "Create/Upload a SSL certificate", "get-info" => "Get information about a SSL certificate", "delete" => "Delete a SSL certificate");  break;
+		case "database-clusters":  $apis = array("list" => "List database clusters", "create" => "Create a database cluster", "resize" => "Resize a database cluster", "migrate" => "Migrate a database cluster to another region", "maintenance" => "Configure the automatic maintenance window for a database cluster", "backups" => "List available backups for a database cluster", "restore" => "Restore from a backup into a new database cluster", "get-info" => "Get information about a database cluster", "delete" => "Delete a database cluster and all associated databases, tables, and users");  break;
+		case "database-replicas":  $apis = array("list" => "List read-only database replicas", "create" => "Create a read-only database replica", "get-info" => "Get information about a read-only database replica", "delete" => "Delete a read-only database replica");  break;
+		case "database-users":  $apis = array("list" => "List database users", "create" => "Create a database user", "get-info" => "Get information about a database user", "delete" => "Delete a database user");  break;
+		case "databases":  $apis = array("list" => "List databases", "create" => "Create a database", "get-info" => "Get information about a database", "delete" => "Delete a database");  break;
+		case "database-pools":  $apis = array("list" => "List database connection pools", "create" => "Create a database connection pool", "get-info" => "Get information about a database connection pool", "delete" => "Delete a database connection pool");  break;
 		case "domains":  $apis = array("list" => "List registered domains (DNS)", "create" => "Create a domain (TLD)", "get-info" => "Get information about a domain", "delete" => "Delete a domain and all domain records");  break;
 		case "domain-records":  $apis = array("list" => "List DNS records for a domain", "create" => "Create a domain record (A, AAAA, etc.)", "update" => "Update a domain record", "get-info" => "Get information about a domain record", "delete" => "Delete a domain record");  break;
 		case "droplets":  $apis = array("list" => "List Droplets", "create" => "Create a new Droplet", "get-info" => "Get information about a Droplet", "kernels" => "List all available kernels for a Droplet", "snapshots" => "List all Droplet snapshots", "backups" => "List all Droplet backups", "actions" => "List Droplet actions", "delete" => "Delete a single Droplet", "delete-by-tag" => "Delete all Droplets with a specific tag", "neighbors" => "List neighbors for a Droplet", "all-neighbors" => "List all neighbors for all Droplets");  break;
 		case "droplet-actions":  $apis = array("enable-backups" => "Enable backups", "disable-backups" => "Disable backups", "reboot" => "Reboot (gentle)", "power-cycle" => "Power cycle (hard reset)", "shutdown" => "Shutdown (gentle)", "power-off" => "Power off (forced shutdown)", "power-on" => "Power on", "restore" => "Restore from a backup image", "password-reset" => "Password reset", "resize" => "Resize Droplet", "rebuild" => "Recreate/Rebuild Droplet with a specific image", "rename" => "Rename", "change-kernel" => "Change Droplet kernel", "enable-ipv6" => "Enable IPv6 support", "enable-private-networking" => "Enable Shared Private Networking", "snapshot" => "Create a snapshot image");  break;
 		case "firewalls":  $apis = array("list" => "List firewalls", "create" => "Create a firewall", "update" => "Update a firewall", "add-tag" => "Adds a tag to a firewall", "remove-tag" => "Removes a tag from a firewall", "add-droplet" => "Adds a Droplet to a firewall", "remove-droplet" => "Removes a Droplet from a firewall", "get-info" => "Get information about a firewall", "delete" => "Delete a firewall");  break;
-		case "images":  $apis = array("list" => "List images (snapshots, backups, etc.)", "actions" => "List image actions", "rename" => "Rename image", "delete" => "Delete image", "get-info" => "Get information about an image");  break;
+		case "images":  $apis = array("list" => "List images (snapshots, backups, etc.)", "create" => "Create a custom image", "actions" => "List image actions", "rename" => "Rename image", "delete" => "Delete image", "get-info" => "Get information about an image");  break;
 		case "image-actions":  $apis = array("transfer" => "Transfer/Copy an image to another region", "convert" => "Convert a backup to a snapshot");  break;
 		case "load-balancers":  $apis = array("list" => "List load balancers", "create" => "Create a load balancer", "update" => "Update a load balancer", "add-forwarding-rule" => "Adds a forwarding rule to a load balancer", "remove-forwarding-rule" => "Removes a forwarding rule from a load balancer", "add-droplet" => "Adds a Droplet to a load balancer", "remove-droplet" => "Removes a Droplet from a load balancer", "get-info" => "Get information about a load balancer", "delete" => "Delete a load balancer");  break;
+		case "projects":  $apis = array("list" => "List projects", "create" => "Create a project", "update" => "Update a project", "get-info" => "Get information about a project");  break;
+		case "project-resources":  $apis = array("list" => "List resources", "assign" => "Assign a resource to a project");  break;
 		case "snapshots":  $apis = array("list" => "List snapshots", "get-info" => "Get information about a snapshot", "delete" => "Delete a snapshot");  break;
 		case "ssh-keys":  $apis = array("list" => "List SSH public keys in DigitalOcean account", "create" => "Add a SSH public key to your account", "get-info" => "Get information about a SSH public key", "rename" => "Rename a SSH public key", "delete" => "Remove a SSH public key from your account");  break;
 		case "regions":  $apis = array("list" => "List all regions");  break;
@@ -274,6 +290,28 @@
 		return $id;
 	}
 
+	function GetCDNEndpointID()
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "id"))  $id = CLI::GetUserInputWithArgs($args, "id", "CDN endpoint ID", false, "", $suppressoutput);
+		else
+		{
+			$result = $do->CDNEndpointsList();
+			if (!$result["success"])  DisplayResult($result);
+
+			$cdns = array();
+			foreach ($result["data"] as $cdn)
+			{
+				$cdns[$cdn["id"]] = $cdn["origin"] . ($cdn["custom_domain"] !== "" ? " (" . $cdn["custom_domain"] . ")" : "");
+			}
+			if (!count($cdns))  CLI::DisplayError("No CDN endpoints have been created.  Try creating your first CDN endpoint with the API:  cdn-endpoints create");
+			$id = CLI::GetLimitedUserInputWithArgs($args, "id", "CDN endpoint ID", false, "Available CDN endpoints:", $cdns, true, $suppressoutput);
+		}
+
+		return $id;
+	}
+
 	function GetCertificateID($default = false, $certificates = array())
 	{
 		global $suppressoutput, $args, $do;
@@ -295,6 +333,94 @@
 		return $id;
 	}
 
+	function GetDatabaseClusterID()
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "id"))  $id = CLI::GetUserInputWithArgs($args, "id", "Database cluster ID", false, "", $suppressoutput);
+		else
+		{
+			$result = $do->DatabaseClustersList();
+			if (!$result["success"])  DisplayResult($result);
+
+			$clusters = array();
+			foreach ($result["data"] as $cluster)
+			{
+				$clusters[$cluster["id"]] = $cluster["name"];
+			}
+			if (!count($clusters))  CLI::DisplayError("No database clusters have been created.  Try creating your first database cluster with the API:  database-clusters create");
+			$id = CLI::GetLimitedUserInputWithArgs($args, "id", "Database cluster ID", false, "Available database clusters:", $clusters, true, $suppressoutput);
+		}
+
+		return $id;
+	}
+
+	function GetDatabaseUsername($id)
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "name"))  $name = CLI::GetUserInputWithArgs($args, "name", "Database username", false, "", $suppressoutput);
+		else
+		{
+			$result = $do->DatabaseUsersList($id);
+			if (!$result["success"])  DisplayResult($result);
+
+			$users = array();
+			foreach ($result["data"] as $user)
+			{
+				$users[$user["name"]] = $user["name"] . " (" . $user["role"] . ")";
+			}
+			if (!count($users))  CLI::DisplayError("No database users have been created.  Try creating your first database user with the API:  database-users create");
+			$name = CLI::GetLimitedUserInputWithArgs($args, "name", "Database username", false, "Available database users:", $users, true, $suppressoutput);
+		}
+
+		return $name;
+	}
+
+	function GetDatabaseName($id)
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "name"))  $name = CLI::GetUserInputWithArgs($args, "name", "Database name", false, "", $suppressoutput);
+		else
+		{
+			$result = $do->DatabasesList($id);
+			if (!$result["success"])  DisplayResult($result);
+
+			$databases = array();
+			foreach ($result["data"] as $db)
+			{
+				$databases[$db["name"]] = $db["name"];
+			}
+			if (!count($databases))  CLI::DisplayError("No databases have been created.  Try creating your first database with the API:  database create");
+			$name = CLI::GetLimitedUserInputWithArgs($args, "name", "Database", false, "Available databases:", $databases, true, $suppressoutput);
+		}
+
+		return $name;
+	}
+
+	function GetDatabasePoolName($id)
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "name"))  $name = CLI::GetUserInputWithArgs($args, "name", "Database connection pool", false, "", $suppressoutput);
+		else
+		{
+			$result = $do->DatabasePoolsList($id);
+			if (!$result["success"])  DisplayResult($result);
+
+			$pools = array();
+			foreach ($result["data"] as $pool)
+			{
+				$pools[$pool["name"]] = $pool["mode"] . ", " . $pool["size"] . " max connections, " . $pool["db"] . ", " . $pool["user"];
+			}
+			if (!count($pools))  CLI::DisplayError("No database connection pools have been created.  Try creating your first database connection pool with the API:  database-pools create");
+			$name = CLI::GetLimitedUserInputWithArgs($args, "name", "Database connection pool", false, "Available database connection pools:", $pools, true, $suppressoutput);
+		}
+
+		return $name;
+	}
+
 	function GetDomainName($arg)
 	{
 		global $suppressoutput, $args, $do;
@@ -313,6 +439,38 @@
 		}
 
 		return $domainname;
+	}
+
+	function GetDomainNameRecord($domainname)
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "id"))
+		{
+			$id = CLI::GetUserInputWithArgs($args, "id", "Domain record ID", false, "", $suppressoutput);
+
+			$result = $do->DomainRecordsGetInfo($domainname, $id);
+			if (!$result["success"])  DisplayResult($result);
+		}
+		else
+		{
+			$result = $do->DomainRecordsList($domainname);
+			if (!$result["success"])  DisplayResult($result);
+
+			$ids = array();
+			$ids2 = array();
+			foreach ($result["data"] as $record)
+			{
+				$ids[$record["id"]] = $record["type"] . " | " . $record["name"] . " | " . $record["data"] . (isset($record["priority"]) ? " | " . $record["priority"] : "") . (isset($record["port"]) ? " | " . $record["port"] : "") . (isset($record["weight"]) ? " | " . $record["weight"] : "");
+				$ids2[$record["id"]] = $record;
+			}
+			if (!count($ids))  CLI::DisplayError("No domain records have been created.  Try creating your first domain record with the API:  domain-records create");
+			$id = CLI::GetLimitedUserInputWithArgs($args, "id", "Domain record ID", false, "Available domain records:", $ids, true, $suppressoutput);
+			unset($result["data"]);
+			$result["record"] = $ids2[$id];
+		}
+
+		return $result;
 	}
 
 	function GetDropletSize($info = "")
@@ -573,13 +731,69 @@
 		return $result;
 	}
 
+	function GetProjectID($question = "Project ID")
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "id"))  $id = CLI::GetUserInputWithArgs($args, "id", $question, false, "", $suppressoutput);
+		else
+		{
+			$result = $do->ProjectsList();
+			if (!$result["success"])  DisplayResult($result);
+
+			$projects = array();
+			$default = false;
+			foreach ($result["data"] as $project)
+			{
+				$projects[$project["id"]] = $project["name"] . ($project["is_default"] ? " (default)" : "");
+				if ($project["is_default"])  $default = $project["id"];
+			}
+			if (!count($projects))  CLI::DisplayError("No Projects have been created.  Try creating your first Project with the API:  projects create");
+			$id = CLI::GetLimitedUserInputWithArgs($args, "id", $question, $default, "Available Projects:", $projects, true, $suppressoutput);
+		}
+
+		return $id;
+	}
+
+	function GetSSHKey()
+	{
+		global $suppressoutput, $args, $do;
+
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "sshkey"))
+		{
+			$id = CLI::GetUserInputWithArgs($args, "sshkey", "SSH key ID", false, "", $suppressoutput);
+
+			$result = $do->SSHKeysGetInfo($id);
+			if (!$result["success"])  DisplayResult($result);
+		}
+		else
+		{
+			$result = $do->SSHKeysList();
+			if (!$result["success"])  DisplayResult($result);
+
+			$ids = array();
+			$ids2 = array();
+			foreach ($result["data"] as $sshkey)
+			{
+				$ids[$sshkey["id"]] = $sshkey["name"] . " | " . $sshkey["fingerprint"];
+				$ids2[$sshkey["id"]] = $sshkey;
+			}
+			if (!count($ids))  CLI::DisplayError("No SSH keys have been created/registered.  Try creating/registering your first SSH key with the API:  ssh-keys create");
+			$id = CLI::GetLimitedUserInputWithArgs($args, "sshkey", "SSH key ID", false, "Available SSH keys:", $ids, true, $suppressoutput);
+			unset($result["data"]);
+			$result["ssh_key"] = $ids2[$id];
+		}
+
+		return $result;
+	}
+
 	function GetTagName()
 	{
 		global $suppressoutput, $args, $do;
 
-		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "tag_name"))
+		if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "tag"))
 		{
-			$tagname = CLI::GetUserInputWithArgs($args, "tag_name", "Tag name", false, "", $suppressoutput);
+			$tagname = CLI::GetUserInputWithArgs($args, "tag", "Tag name", false, "", $suppressoutput);
 
 			$result = $do->TagsGetInfo($tagname);
 			if (!$result["success"])  DisplayResult($result);
@@ -604,12 +818,33 @@
 				$tags2[$tag["name"]] = $tag;
 			}
 			if (!count($tags))  CLI::DisplayError("No tags have been created.  Try creating your first tag with the API:  tags create");
-			$tagname = CLI::GetLimitedUserInputWithArgs($args, "tag_name", "Tag name", false, "Available tags:", $tags, true, $suppressoutput);
+			$tagname = CLI::GetLimitedUserInputWithArgs($args, "tag", "Tag name", false, "Available tags:", $tags, true, $suppressoutput);
 			unset($result["data"]);
 			$result["tag"] = $tags2[$tagname];
 		}
 
 		return $result;
+	}
+
+	function ReinitArgs($newargs)
+	{
+		global $args;
+
+		// Process the parameters.
+		$options = array(
+			"shortmap" => array(
+				"?" => "help"
+			),
+			"rules" => array(
+			)
+		);
+
+		foreach ($newargs as $arg)  $options["rules"][$arg] = array("arg" => true, "multiple" => true);
+		$options["rules"]["help"] = array("arg" => false);
+
+		$args = CLI::ParseCommandLine($options, array_merge(array(""), $args["params"]));
+
+		if (isset($args["opts"]["help"]))  DisplayResult(array("success" => true, "options" => array_keys($options["rules"])));
 	}
 
 	if ($apigroup === "account")
@@ -622,18 +857,24 @@
 		// Actions.
 		if ($api === "list")
 		{
+			ReinitArgs(array("pages"));
+
 			$numpages = (int)CLI::GetUserInputWithArgs($args, "pages", "Number of pages to retrieve", "1", "", $suppressoutput);
 
 			DisplayResult($do->ActionsList($numpages));
 		}
 		else if ($api === "get-info")
 		{
+			ReinitArgs(array("id"));
+
 			$id = CLI::GetUserInputWithArgs($args, "id", "Action ID", false, "", $suppressoutput);
 
 			DisplayResult($do->ActionsGetInfo($id));
 		}
 		else if ($api === "wait")
 		{
+			ReinitArgs(array("id", "wait"));
+
 			$id = CLI::GetUserInputWithArgs($args, "id", "Action ID", false, "", $suppressoutput);
 			$wait = (int)CLI::GetUserInputWithArgs($args, "wait", "Wait in seconds", false, "", $suppressoutput);
 			if ($wait < 1)  $wait = 1;
@@ -647,6 +888,8 @@
 		if ($api === "list")  DisplayResult($do->VolumesList());
 		else if ($api === "create")
 		{
+			ReinitArgs(array("name", "desc", "size", "mode", "region", "id", "snapshot", "fstype", "fslabel"));
+
 			$name = CLI::GetUserInputWithArgs($args, "name", "Block Storage volume name", false, "", $suppressoutput);
 			$desc = CLI::GetUserInputWithArgs($args, "desc", "Description", "", "", $suppressoutput);
 			$size = (int)CLI::GetUserInputWithArgs($args, "size", "Size (in GB)", "1", "DigitalOcean Block Storage is approximately \$0.10 USD/month per GB.", $suppressoutput);
@@ -663,7 +906,7 @@
 			{
 				// Get supported Droplet region.
 				$region = GetDropletRegion("Block Storage region", false, false, false, false, true, "");
-				$modeopts["region"] = $region;
+				$volumeopts["region"] = $region;
 			}
 			else
 			{
@@ -693,6 +936,8 @@
 		}
 		else
 		{
+			ReinitArgs(array("id", "name"));
+
 			$result = GetVolumeID();
 			$id = $result["volume"]["id"];
 
@@ -709,6 +954,8 @@
 	}
 	else if ($apigroup === "volume-actions")
 	{
+		ReinitArgs(array("id", "size", "wait"));
+
 		$result = GetVolumeID();
 		$id = $result["volume"]["id"];
 		$region = $result["volume"]["region"]["slug"];
@@ -738,12 +985,77 @@
 
 		DisplayResult($do->VolumeActionsByID($id, $api, $actionvalues), $wait, $defaultwait, $initwait);
 	}
+	else if ($apigroup === "cdn-endpoints")
+	{
+		// Content Delivery Network (CDN) endpoints.
+		if ($api === "list")  DisplayResult($do->CDNEndpointsList());
+		else if ($api === "create" || $api === "update")
+		{
+			ReinitArgs(array("origin", "ttl", "id", "customdomain"));
+
+			if ($api === "create")  $origin = CLI::GetUserInputWithArgs($args, "origin", "Origin domain", false, "The next question asks for the fully qualified domain name (FQDN) for the origin server which the provides the content for the CDN.", $suppressoutput);
+			else
+			{
+				$id = GetCDNEndpointID();
+
+				$info = $do->CDNEndpointsGetInfo($id);
+				if (!$info["success"])  DisplayResult($info);
+			}
+
+			$cdnopts = array();
+			$cdnopts["ttl"] = (int)CLI::GetUserInputWithArgs($args, "ttl", "Cache TTL", ($api === "update" ? $info["endpoint"]["ttl"] : "3600"), "", $suppressoutput);
+			$cdnopts["certificate_id"] = "";
+			$cdnopts["custom_domain"] = "";
+
+			$certid = GetCertificateID(($api === "update" ? ($info["endpoint"]["certificate_id"] !== "" ? $info["endpoint"]["certificate_id"] : "-") : false), array("-" => "None"));
+
+			if ($certid !== "-")
+			{
+				$cdnopts["certificate_id"] = $certid;
+
+				$result = $do->CertificatesGetInfo($certid);
+				if (!$result["success"])  DisplayResult($result);
+
+				$pos = CLI::GetLimitedUserInputWithArgs($args, "customdomain", "Custom domain", ($api === "update" ? $info["endpoint"]["custom_domain"] : false), "Available domains:", $result["certificate"]["dns_names"], true, $suppressoutput);
+				$cdnopts["custom_domain"] = $result["certificate"]["dns_names"][$pos];
+			}
+
+			if ($api === "create")  DisplayResult($do->CDNEndpointsCreate($origin, $cdnopts));
+			else  DisplayResult($do->CDNEndpointsUpdate($id, $cdnopts));
+		}
+		else if ($api === "purge")
+		{
+			ReinitArgs(array("id", "file"));
+
+			$id = GetCDNEndpointID();
+
+			$files = array();
+			do
+			{
+				$file = CLI::GetUserInputWithArgs($args, "file", (count($files) ? "Another filename/pattern" : "Filename or pattern"), "", "", $suppressoutput);
+				if ($file !== "")  $files[] = $file;
+			} while ($file !== "" || !count($files));
+
+			DisplayResult($do->CDNEndpointsPurge($id, $files));
+		}
+		else
+		{
+			ReinitArgs(array("id"));
+
+			$id = GetCDNEndpointID();
+
+			if ($api === "get-info")  DisplayResult($do->CDNEndpointsGetInfo($id));
+			else if ($api === "delete")  DisplayResult($do->CDNEndpointsDelete($id));
+		}
+	}
 	else if ($apigroup === "certificates")
 	{
 		// Certificates.
 		if ($api === "list")  DisplayResult($do->CertificatesList());
 		else if ($api === "create")
 		{
+			ReinitArgs(array("name", "type", "dnsname", "privatekey", "publickey", "certchain"));
+
 			$name = CLI::GetUserInputWithArgs($args, "name", "Certificate name", false, "", $suppressoutput);
 
 			$types = array(
@@ -823,10 +1135,299 @@
 		}
 		else
 		{
+			ReinitArgs(array("id"));
+
 			$id = GetCertificateID();
 
 			if ($api === "get-info")  DisplayResult($do->CertificatesGetInfo($id));
 			else if ($api === "delete")  DisplayResult($do->CertificatesDelete($id));
+		}
+	}
+	else if ($apigroup === "database-clusters")
+	{
+		// Database clusters.
+		if ($api === "list")  DisplayResult($do->DatabaseClustersList());
+		else if ($api === "create")
+		{
+			ReinitArgs(array("name", "engine", "size", "region", "nodes"));
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "Cluster name", false, "", $suppressoutput);
+
+			$engines = array(
+				"pg" => "PostgreSQL"
+			);
+
+			$engine = CLI::GetLimitedUserInputWithArgs($args, "engine", "Database engine", false, "Available database engines:", $engines, true, $suppressoutput);
+
+			// NOTE:  There is insufficient API support for determining what versions of an engine are available for use.  Using the latest version is probably the best option anyway (i.e. the default).
+
+			// NOTE:  There is insufficient API support for determining what regions and sizes support database clusters.
+			$size = CLI::GetUserInputWithArgs($args, "size", "Size slug", false, "NOTE:  There is insufficient API support for determining what sizes support database clusters.  Please read the API documentation to determine what size slug to use for the next question.", $suppressoutput);
+
+			$region = GetDropletRegion("Database cluster region", false, false, false, false, false, "");
+
+			$nodes = (int)CLI::GetUserInputWithArgs($args, "nodes", "Number of nodes", false, "The next question asks for the number of nodes to use for the database cluster and must be between 1 and 3 inclusive.", $suppressoutput);
+			if ($nodes < 1)  $nodes = 1;
+			if ($nodes > 3)  $nodes = 3;
+
+			DisplayResult($do->DatabaseClustersCreate($name, $engine, $size, $region, $nodes));
+		}
+		else if ($api === "resize")
+		{
+			ReinitArgs(array("id", "size", "nodes"));
+
+			$id = GetDatabaseClusterID();
+
+			// NOTE:  There is insufficient API support for determining what regions and sizes support database clusters.
+			$size = CLI::GetUserInputWithArgs($args, "size", "New size slug", false, "The next question asks for a new size slug.  It must be equal to or larger than the current database cluster size.  NOTE:  There is insufficient API support for determining what sizes support database clusters.  Please read the API documentation to determine what size slug to use for the next question.", $suppressoutput);
+
+			$nodes = (int)CLI::GetUserInputWithArgs($args, "nodes", "Number of nodes", false, "The next question asks for the number of nodes to use for the database cluster and must be between 1 and 3 inclusive.", $suppressoutput);
+			if ($nodes < 1)  $nodes = 1;
+			if ($nodes > 3)  $nodes = 3;
+
+			DisplayResult($do->DatabaseClustersResize($id, $size, $nodes));
+		}
+		else if ($api === "migrate")
+		{
+			ReinitArgs(array("id", "region"));
+
+			$id = GetDatabaseClusterID();
+
+			// NOTE:  There is insufficient API support for determining what regions and sizes support database clusters.
+			$region = GetDropletRegion("New database cluster region", false, false, false, false, false, "");
+
+			DisplayResult($do->DatabaseClustersMigrate($id, $region));
+		}
+		else if ($api === "maintenance")
+		{
+			ReinitArgs(array("id", "day", "time"));
+
+			$id = GetDatabaseClusterID();
+
+			$result = $do->DatabaseClustersGetInfo($id);
+			if (!$result["success"])  DisplayResult($result);
+
+			$days = array(
+				"Sunday",
+				"Monday",
+				"Tuesday",
+				"Wednesday",
+				"Thursday",
+				"Friday",
+				"Saturday",
+			);
+
+			$day = CLI::GetLimitedUserInputWithArgs($args, "day", "Weekday", $result["database"]["maintenance_window"]["day"], "Available weekdays:", $days, true, $suppressoutput);
+			$day = strtolower($days[$day]);
+
+			$time = CLI::GetUserInputWithArgs($args, "time", "Time", $result["database"]["maintenance_window"]["hour"], "The next question asks for the 24-hour clock time during which to perform cluster maintenance.", $suppressoutput);
+
+			DisplayResult($do->DatabaseClustersMaintenance($id, $day, $time));
+		}
+		else if ($api === "restore")
+		{
+			ReinitArgs(array("id", "backup", "name"));
+
+			$id = GetDatabaseClusterID();
+
+			$result = $do->DatabaseClustersBackups($id);
+			if (!$result["success"])  DisplayResult($result);
+
+			$backups = array();
+			foreach ($result["data"] as $backup)
+			{
+				$backups[] = trim(str_replace(array("T", "Z"), " ", $backup["created_at"])) . ", " . number_format($backup["size_gigabytes"], 2) . " GB";
+			}
+			if (!count($backups))  CLI::DisplayError("No backups exist for the specified database cluster.");
+			$backup = CLI::GetLimitedUserInputWithArgs($args, "backup", "Backup", (count($backups) - 1), "Available backups:", $backups, true, $suppressoutput);
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "New cluster name", false, "The next question asks for a new cluster name to restore the backup into.", $suppressoutput);
+
+			$result2 = $do->DatabaseClustersGetInfo($id);
+			if (!$result2["success"])  DisplayResult($info);
+
+			$createopts = array(
+				"version" => $result2["database"]["version"],
+				"backup_restore" => array(
+					"database_name" => $result2["database"]["name"],
+					"backup_created_at" => $backups["data"][$backup]["created_at"]
+				)
+			);
+
+			DisplayResult($do->DatabaseClustersCreate($name, $result2["database"]["engine"], $result2["database"]["size"], $result2["database"]["region"], $result2["database"]["nodes"], $createopts));
+		}
+		else
+		{
+			ReinitArgs(array("id"));
+
+			$id = GetDatabaseClusterID();
+
+			if ($api === "get-info")  DisplayResult($do->DatabaseClustersGetInfo($id));
+			else if ($api === "backups")  DisplayResult($do->DatabaseClustersBackups($id));
+			else if ($api === "delete")  DisplayResult($do->DatabaseClustersDelete($id));
+		}
+	}
+	else if ($apigroup === "database-replicas")
+	{
+		// Database cluster read-only replicas.
+		if ($api === "list")
+		{
+			ReinitArgs(array("id"));
+
+			$id = GetDatabaseClusterID();
+
+			DisplayResult($do->DatabaseReplicasList($id));
+		}
+		else if ($api === "create")
+		{
+			ReinitArgs(array("id", "name", "size", "region"));
+
+			$id = GetDatabaseClusterID();
+
+			$result = $do->DatabaseClustersGetInfo($id);
+			if (!$result["success"])  DisplayResult($info);
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "Replica name", false, "", $suppressoutput);
+
+			// NOTE:  There is insufficient API support for determining what regions and sizes support database clusters.
+			$size = CLI::GetUserInputWithArgs($args, "size", "Size slug", $result["database"]["size"], "The next question asks for a size slug for the replica.  It must be equal to or larger than the current database cluster size.  NOTE:  There is insufficient API support for determining what sizes support database clusters.  Please read the API documentation to determine what size slug to use for the next question.", $suppressoutput);
+
+			$region = GetDropletRegion("Database cluster region", false, false, false, false, false, "");
+
+			DisplayResult($do->DatabaseReplicasCreate($id, $name, $size, $region));
+		}
+		else
+		{
+			ReinitArgs(array("id", "name"));
+
+			$id = GetDatabaseClusterID();
+
+			$result = $do->DatabaseReplicasList($id);
+			if (!$result["success"])  DisplayResult($result);
+
+			$names = array();
+			foreach ($result["data"] as $replica)
+			{
+				$names[$replica["name"]] = trim(str_replace(array("T", "Z"), " ", $replica["created_at"])) . ", " . $replica["region"] . ", " . $replica["status"];
+			}
+
+			$name = CLI::GetLimitedUserInputWithArgs($args, "name", "Replica name", false, "Available replica names:", $names, true, $suppressoutput);
+
+			if ($api === "get-info")  DisplayResult($do->DatabaseReplicasGetInfo($id, $name));
+			else if ($api === "delete")  DisplayResult($do->DatabaseReplicasDelete($id, $name));
+		}
+	}
+	else if ($apigroup === "database-users")
+	{
+		// Database cluster users.
+		if ($api === "list")
+		{
+			ReinitArgs(array("id"));
+
+			$id = GetDatabaseClusterID();
+
+			DisplayResult($do->DatabaseUsersList($id));
+		}
+		else if ($api === "create")
+		{
+			ReinitArgs(array("id", "name"));
+
+			$id = GetDatabaseClusterID();
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "Username", false, "", $suppressoutput);
+
+			DisplayResult($do->DatabaseUsersCreate($id, $name));
+		}
+		else
+		{
+			ReinitArgs(array("id", "name"));
+
+			$id = GetDatabaseClusterID();
+
+			$name = GetDatabaseUsername($id);
+
+			if ($api === "get-info")  DisplayResult($do->DatabaseUsersGetInfo($id, $name));
+			else if ($api === "delete")  DisplayResult($do->DatabaseUsersDelete($id, $name));
+		}
+	}
+	else if ($apigroup === "databases")
+	{
+		// Databases in a database cluster.
+		if ($api === "list")
+		{
+			ReinitArgs(array("id"));
+
+			$id = GetDatabaseClusterID();
+
+			DisplayResult($do->DatabasesList($id));
+		}
+		else if ($api === "create")
+		{
+			ReinitArgs(array("id", "name"));
+
+			$id = GetDatabaseClusterID();
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "Database name", false, "", $suppressoutput);
+
+			DisplayResult($do->DatabasesCreate($id, $name));
+		}
+		else
+		{
+			ReinitArgs(array("id", "name"));
+
+			$id = GetDatabaseClusterID();
+
+			$name = GetDatabaseName($id);
+
+			if ($api === "get-info")  DisplayResult($do->DatabasesGetInfo($id, $name));
+			else if ($api === "delete")  DisplayResult($do->DatabasesDelete($id, $name));
+		}
+	}
+	else if ($apigroup === "database-pools")
+	{
+		// Databases pools for a database.
+		if ($api === "list")
+		{
+			ReinitArgs(array("id"));
+
+			$id = GetDatabaseClusterID();
+
+			DisplayResult($do->DatabasePoolsList($id));
+		}
+		else if ($api === "create")
+		{
+			ReinitArgs(array("id", "name", "mode", "size"));
+
+			$id = GetDatabaseClusterID();
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "Connection pool name", false, "", $suppressoutput);
+
+			$modes = array(
+				"transaction" => "One backend connection per transaction and clients can remain connected but idle",
+				"session" => "A backend connection is assigned per client until the client disconnects",
+				"statement" => "One backend connection per statement and refuses transactions with multiple statements"
+			);
+
+			$mode = CLI::GetLimitedUserInputWithArgs($args, "mode", "Mode", "transaction", "Available connection pool modes:", $modes, true, $suppressoutput);
+
+			$size = (int)CLI::GetUserInputWithArgs($args, "size", "Connection pool size", false, "The next question asks how large the backend connection pool size should be.  The value is limited by the amount of RAM in the cluster (25 connections allowed per GB) minus the total number of connections in other connection pools minus 3 (reserved for database maintenance connections).", $suppressoutput);
+			if ($size < 0)  $size = 1;
+
+			$dbname = GetDatabaseName($id);
+			$username = GetDatabaseUsername($id);
+
+			DisplayResult($do->DatabasePoolsCreate($id, $name, $mode, $size, $dbname, $username));
+		}
+		else
+		{
+			ReinitArgs(array("id", "name"));
+
+			$id = GetDatabaseClusterID();
+
+			$name = GetDatabasePoolName($id);
+
+			if ($api === "get-info")  DisplayResult($do->DatabasePoolsGetInfo($id, $name));
+			else if ($api === "delete")  DisplayResult($do->DatabasePoolsDelete($id, $name));
 		}
 	}
 	else if ($apigroup === "domains")
@@ -835,6 +1436,8 @@
 		if ($api === "list")  DisplayResult($do->DomainsList());
 		else if ($api === "create")
 		{
+			ReinitArgs(array("name", "ip"));
+
 			$name = CLI::GetUserInputWithArgs($args, "name", "Domain name (TLD, no subdomains)", false, "", $suppressoutput);
 			$ipaddr = CLI::GetUserInputWithArgs($args, "ip", "IP address to point the domain to", "", "", $suppressoutput);
 
@@ -842,6 +1445,8 @@
 		}
 		else
 		{
+			ReinitArgs(array("name"));
+
 			$name = GetDomainName("name");
 
 			if ($api === "get-info")  DisplayResult($do->DomainsGetInfo($name));
@@ -851,88 +1456,78 @@
 	else if ($apigroup === "domain-records")
 	{
 		// Domain records.
-		$domainname = GetDomainName("domain");
+		if ($api === "list")
+		{
+			ReinitArgs(array("domain"));
 
-		if ($api === "list")  DisplayResult($do->DomainRecordsList($domainname));
+			$domainname = GetDomainName("domain");
+
+			DisplayResult($do->DomainRecordsList($domainname));
+		}
+		else if ($api === "create" || $api === "update")
+		{
+			if ($api === "create")  ReinitArgs(array("domain", "type", "data", "priority", "port", "weight", "flags", "tag", "ttl"));
+			else  ReinitArgs(array("domain", "id", "type", "data", "priority", "port", "weight", "flags", "tag", "ttl"));
+
+			$domainname = GetDomainName("domain");
+
+			if ($api === "update")  $result = GetDomainNameRecord($domainname);
+
+			$types = array(
+				"A" => "IPv4",
+				"AAAA" => "IPv6",
+				"CAA" => "Certification Authority Authorization",
+				"CNAME" => "Canonical Name/Alias",
+				"MX" => "Mail eXchange",
+				"TXT" => "Arbitrary text such as a SPF record",
+				"SRV" => "Service",
+				"NS" => "Nameserver"
+			);
+			$type = CLI::GetLimitedUserInputWithArgs($args, "type", "DNS record type", ($api === "update" ? $result["record"]["type"] : false), "Available DNS record types:", $types, true, $suppressoutput);
+
+			if ($type === "A" || $type === "AAAA" || $type === "CAA" || $type === "CNAME" || $type === "TXT" || $type === "SRV")  $name = CLI::GetUserInputWithArgs($args, "name", "Name", ($api === "update" ? $result["record"]["name"] : "@"), "", $suppressoutput);
+			else  $name = "";
+
+			$data = CLI::GetUserInputWithArgs($args, "data", "Value/data", ($api === "update" ? $result["record"]["data"] : false), "", $suppressoutput);
+
+			if ($type === "MX" || $type === "SRV")  $priority = (int)CLI::GetUserInputWithArgs($args, "priority", "Priority", ($api === "update" && isset($result["record"]["priority"]) ? $result["record"]["priority"] : "0"), "", $suppressoutput);
+			else  $priority = null;
+
+			if ($type === "SRV")  $port = (int)CLI::GetUserInputWithArgs($args, "port", "Port", ($api === "update" && isset($result["record"]["port"]) ? $result["record"]["port"] : "0"), "", $suppressoutput);
+			else  $port = null;
+
+			if ($type === "SRV")  $weight = (int)CLI::GetUserInputWithArgs($args, "weight", "Weight", ($api === "update" && isset($result["record"]["weight"]) ? $result["record"]["weight"] : "1"), "", $suppressoutput);
+			else  $weight = null;
+
+			if ($type === "CAA")  $flags = (int)CLI::GetUserInputWithArgs($args, "flags", "Flags", ($api === "update" && isset($result["record"]["flags"]) ? $result["record"]["flags"] : "0"), "", $suppressoutput);
+			else  $flags = null;
+
+			if ($type !== "CAA")  $tag = null;
+			else
+			{
+				$tags = array(
+					"issue" => "Grant authorization to a specific certificate issuer",
+					"issuewild" => "Grant authorization to specific certificate issuers that only specify a wildcard domain",
+					"iodef" => "Report a certificate issue request"
+				);
+				$tag = CLI::GetLimitedUserInputWithArgs($args, "tag", "CAA property tag", ($api === "update" ? $result["record"]["tag"] : false), "Available CAA property tags:", $tags, true, $suppressoutput);
+			}
+
+			$ttl = CLI::GetUserInputWithArgs($args, "ttl", "TTL", ($api === "update" ? $result["record"]["ttl"] : "1800"), "", $suppressoutput);
+
+			if ($api === "create")  DisplayResult($do->DomainRecordsCreate($domainname, $type, $name, $data, $ttl, array("priority" => $priority, "port" => $port, "weight" => $weight, "flags" => $flags, "tag" => $tag)));
+			else  DisplayResult($do->DomainRecordsUpdate($domainname, $result["record"]["id"], array("type" => $type, "name" => $name, "data" => $data, "priority" => $priority, "port" => $port, "weight" => $weight, "flags" => $flags, "tag" => $tag, "ttl" => $ttl)));
+		}
 		else
 		{
-			if ($api !== "create")
-			{
-				if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "id"))
-				{
-					$id = CLI::GetUserInputWithArgs($args, "id", "Domain record ID", false, "", $suppressoutput);
+			ReinitArgs(array("domain", "id"));
 
-					$result = $do->DomainRecordsGetInfo($domainname, $id);
-					if (!$result["success"])  DisplayResult($result);
-				}
-				else
-				{
-					$result = $do->DomainRecordsList($domainname);
-					if (!$result["success"])  DisplayResult($result);
+			$domainname = GetDomainName("domain");
 
-					$ids = array();
-					$ids2 = array();
-					foreach ($result["data"] as $record)
-					{
-						$ids[$record["id"]] = $record["type"] . " | " . $record["name"] . " | " . $record["data"] . (isset($record["priority"]) ? " | " . $record["priority"] : "") . (isset($record["port"]) ? " | " . $record["port"] : "") . (isset($record["weight"]) ? " | " . $record["weight"] : "");
-						$ids2[$record["id"]] = $record;
-					}
-					if (!count($ids))  CLI::DisplayError("No domain records have been created.  Try creating your first domain record with the API:  domain-records create");
-					$id = CLI::GetLimitedUserInputWithArgs($args, "id", "Domain record ID", false, "Available domain records:", $ids, true, $suppressoutput);
-					unset($result["data"]);
-					$result["record"] = $ids2[$id];
-				}
-			}
+			$result = GetDomainNameRecord($domainname);
 
-			if ($api === "create" || $api === "update")
-			{
-				$types = array(
-					"A" => "IPv4",
-					"AAAA" => "IPv6",
-					"CAA" => "Certification Authority Authorization",
-					"CNAME" => "Canonical Name/Alias",
-					"MX" => "Mail eXchange",
-					"TXT" => "Arbitrary text such as a SPF record",
-					"SRV" => "Service",
-					"NS" => "Nameserver"
-				);
-				$type = CLI::GetLimitedUserInputWithArgs($args, "type", "DNS record type", ($api === "update" ? $result["record"]["type"] : false), "Available DNS record types:", $types, true, $suppressoutput);
-
-				if ($type === "A" || $type === "AAAA" || $type === "CAA" || $type === "CNAME" || $type === "TXT" || $type === "SRV")  $name = CLI::GetUserInputWithArgs($args, "name", "Name", ($api === "update" ? $result["record"]["name"] : "@"), "", $suppressoutput);
-				else  $name = "";
-
-				$data = CLI::GetUserInputWithArgs($args, "data", "Value/data", ($api === "update" ? $result["record"]["data"] : false), "", $suppressoutput);
-
-				if ($type === "MX" || $type === "SRV")  $priority = (int)CLI::GetUserInputWithArgs($args, "priority", "Priority", ($api === "update" && isset($result["record"]["priority"]) ? $result["record"]["priority"] : "0"), "", $suppressoutput);
-				else  $priority = null;
-
-				if ($type === "SRV")  $port = (int)CLI::GetUserInputWithArgs($args, "port", "Port", ($api === "update" && isset($result["record"]["port"]) ? $result["record"]["port"] : "0"), "", $suppressoutput);
-				else  $port = null;
-
-				if ($type === "SRV")  $weight = (int)CLI::GetUserInputWithArgs($args, "weight", "Weight", ($api === "update" && isset($result["record"]["weight"]) ? $result["record"]["weight"] : "1"), "", $suppressoutput);
-				else  $weight = null;
-
-				if ($type === "CAA")  $flags = (int)CLI::GetUserInputWithArgs($args, "flags", "Flags", ($api === "update" && isset($result["record"]["flags"]) ? $result["record"]["flags"] : "0"), "", $suppressoutput);
-				else  $flags = null;
-
-				if ($type !== "CAA")  $tag = null;
-				else
-				{
-					$tags = array(
-						"issue" => "Grant authorization to a specific certificate issuer",
-						"issuewild" => "Grant authorization to specific certificate issuers that only specify a wildcard domain",
-						"iodef" => "Report a certificate issue request"
-					);
-					$tag = CLI::GetLimitedUserInputWithArgs($args, "tag", "CAA property tag", ($api === "update" ? $result["record"]["tag"] : false), "Available CAA property tags:", $tags, true, $suppressoutput);
-				}
-
-				$ttl = CLI::GetUserInputWithArgs($args, "ttl", "TTL", ($api === "update" ? $result["record"]["ttl"] : "1800"), "", $suppressoutput);
-
-				if ($api === "create")  DisplayResult($do->DomainRecordsCreate($domainname, $type, $name, $data, $ttl, array("priority" => $priority, "port" => $port, "weight" => $weight, "flags" => $flags, "tag" => $tag)));
-				else  DisplayResult($do->DomainRecordsUpdate($domainname, $id, array("type" => $type, "name" => $name, "data" => $data, "priority" => $priority, "port" => $port, "weight" => $weight, "flags" => $flags, "tag" => $tag, "ttl" => $ttl)));
-			}
-			else if ($api === "get-info")  DisplayResult($result);
-			else if ($api === "delete")  DisplayResult($do->DomainRecordsDelete($domainname, $id));
+			if ($api === "get-info")  DisplayResult($result);
+			else if ($api === "delete")  DisplayResult($do->DomainRecordsDelete($domainname, $result["record"]["id"]));
 		}
 	}
 	else if ($apigroup === "droplets")
@@ -940,6 +1535,8 @@
 		// Droplets.
 		if ($api === "list")
 		{
+			ReinitArgs(array("mode", "tag"));
+
 			$modes = array(
 				"all" => "All Droplets",
 				"tag" => "Only Droplets with a tag"
@@ -961,6 +1558,8 @@
 		}
 		else if ($api === "create")
 		{
+			ReinitArgs(array("name", "size", "backups", "ipv6", "private_network", "storage", "metadata", "region", "volume", "ssh_key", "tag", "wait"));
+
 			// Get Droplet name.
 			$name = CLI::GetUserInputWithArgs($args, "name", "Droplet name", false, "When a Droplet name is set to a domain name managed in the DigitalOcean DNS management system, the name will be used to configure a PTR record for the Droplet.  Each name set during creation will also determine the hostname for the Droplet in its internal configuration.\n", $suppressoutput);
 
@@ -1013,7 +1612,7 @@
 
 					$ids = array();
 					foreach ($result["data"] as $volume)  $ids[$volume["id"]] = $volume["region"]["slug"] . ", " . $volume["name"] . ", " . $volume["size_gigabytes"] . " GB";
-					$ids2 = CLI::GetLimitedUserInputWithArgs($args, "ssh_key", "Volume ID", "", "Available Block Storage volumes:", $ids, true, $suppressoutput, array("exit" => "", "nextquestion" => "Another Volume ID", "nextdefault" => ""));
+					$ids2 = CLI::GetLimitedUserInputWithArgs($args, "volume", "Volume ID", "", "Available Block Storage volumes:", $ids, true, $suppressoutput, array("exit" => "", "nextquestion" => "Another Volume ID", "nextdefault" => ""));
 					foreach ($ids2 as $id)  $volumes[] = $id;
 				}
 			}
@@ -1021,13 +1620,13 @@
 			// Select registered SSH public keys to add to the Droplet.
 			$done = false;
 			$sshkeys = array();
-			if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "ssh_key"))
+			if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "sshkey"))
 			{
 				do
 				{
-					$id = CLI::GetUserInputWithArgs($args, "ssh_key", (count($sshkeys) ? "Another SSH key ID" : "SSH key ID"), "", "", $suppressoutput);
+					$id = CLI::GetUserInputWithArgs($args, "sshkey", (count($sshkeys) ? "Another SSH key ID" : "SSH key ID"), "", "", $suppressoutput);
 					if ($id !== "")  $sshkeys[] = $id;
-				} while ($id !== "" && ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "ssh_key")));
+				} while ($id !== "" && ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "sshkey")));
 
 				if ($id === "")  $done = true;
 			}
@@ -1039,7 +1638,7 @@
 
 				$ids = array();
 				foreach ($result["data"] as $sshkey)  $ids[$sshkey["id"]] = $sshkey["name"] . " | " . $sshkey["fingerprint"];
-				$ids2 = CLI::GetLimitedUserInputWithArgs($args, "ssh_key", "SSH key ID", "", "Available SSH keys:", $ids, true, $suppressoutput, array("exit" => "", "nextquestion" => "Another SSH key ID", "nextdefault" => ""));
+				$ids2 = CLI::GetLimitedUserInputWithArgs($args, "sshkey", "SSH key ID", "", "Available SSH keys:", $ids, true, $suppressoutput, array("exit" => "", "nextquestion" => "Another SSH key ID", "nextdefault" => ""));
 				foreach ($ids2 as $id)  $sshkeys[] = $id;
 			}
 
@@ -1076,13 +1675,28 @@
 		}
 		else if ($api === "delete-by-tag")
 		{
+			ReinitArgs(array("tag"));
+
 			$result = GetTagName();
 			$tagname = $result["tag"]["name"];
 
 			DisplayResult($do->DropletsDeleteByTag($tagname));
 		}
+		else if ($api === "actions")
+		{
+			ReinitArgs(array("id", "pages"));
+
+			$result = GetDropletID();
+			$id = $result["droplet"]["id"];
+
+			$numpages = (int)CLI::GetUserInputWithArgs($args, "pages", "Number of pages to retrieve", "1", "", $suppressoutput);
+
+			DisplayResult($do->DropletsActionsList($id, $numpages));
+		}
 		else
 		{
+			ReinitArgs(array("id"));
+
 			$result = GetDropletID();
 			$id = $result["droplet"]["id"];
 
@@ -1090,12 +1704,6 @@
 			else if ($api === "kernels")  DisplayResult($do->DropletsKernelsList($id));
 			else if ($api === "snapshots")  DisplayResult($do->DropletsSnapshotsList($id));
 			else if ($api === "backups")  DisplayResult($do->DropletsBackupsList($id));
-			else if ($api === "actions")
-			{
-				$numpages = (int)CLI::GetUserInputWithArgs($args, "pages", "Number of pages to retrieve", "1", "", $suppressoutput);
-
-				DisplayResult($do->DropletsActionsList($id, $numpages));
-			}
 			else if ($api === "delete")  DisplayResult($do->DropletsDelete($id));
 			else if ($api === "neighbors")  DisplayResult($do->DropletsNeighborsList($id));
 		}
@@ -1103,6 +1711,14 @@
 	else if ($apigroup === "droplet-actions")
 	{
 		// Droplet actions.
+		if ($api === "restore")  ReinitArgs(array("mode", "id", "image", "wait"));
+		else if ($api === "resize")  ReinitArgs(array("mode", "id", "size", "permanent", "wait"));
+		else if ($api === "rebuild")  ReinitArgs(array("mode", "id", "image", "wait"));
+		else if ($api === "rename")  ReinitArgs(array("mode", "id", "name", "wait"));
+		else if ($api === "change-kernel")  ReinitArgs(array("mode", "id", "kernel", "wait"));
+		else if ($api === "snapshot")  ReinitArgs(array("mode", "id", "tag", "name", "wait"));
+		else  ReinitArgs(array("mode", "id", "tag", "wait"));
+
 		$modes = array(
 			"id" => "Droplet ID"
 		);
@@ -1230,6 +1846,8 @@
 		if ($api === "list")  DisplayResult($do->FirewallsList());
 		else if ($api === "create")
 		{
+			ReinitArgs(array("name", "inboundrules", "outboundrules"));
+
 			$name = CLI::GetUserInputWithArgs($args, "name", "Firewall name", false, "", $suppressoutput);
 
 			do
@@ -1278,101 +1896,113 @@
 
 			DisplayResult($do->FirewallsCreate($name, $inboundrules, $outboundrules));
 		}
+		else if ($api === "update")
+		{
+			ReinitArgs(array("id", "name", "inboundrules", "outboundrules"));
+
+			$result = GetFirewallID();
+			$id = $result["firewall"]["id"];
+			$info = $result["firewall"];
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "Firewall name", $info["name"], "", $suppressoutput);
+
+			do
+			{
+				do
+				{
+					$valid = false;
+					$filename = CLI::GetUserInputWithArgs($args, "inboundrules", "Inbound rules filename", "", "", $suppressoutput);
+					if ($filename === "")
+					{
+						$inboundrules = $info["inbound_rules"];
+
+						$valid = true;
+					}
+					else if (!file_exists($filename))
+					{
+						CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
+					}
+					else
+					{
+						$inboundrules = json_decode(file_get_contents($filename), true);
+
+						if (!is_array($inboundrules))  CLI::DisplayError("The file '" . $filename . "' does not contain valid JSON.", false, false);
+						else
+						{
+							$inboundrules = $do->NormalizeFirewallRules($inboundrules, "inbound");
+
+							$valid = true;
+						}
+					}
+				} while (!$valid);
+
+				do
+				{
+					$valid = false;
+					$filename = CLI::GetUserInputWithArgs($args, "outboundrules", "Outbound rules filename", "", "", $suppressoutput);
+					if ($filename === "")
+					{
+						$outboundrules = $info["outbound_rules"];
+
+						$valid = true;
+					}
+					else if (!file_exists($filename))
+					{
+						CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
+					}
+					else
+					{
+						$outboundrules = json_decode(file_get_contents($filename), true);
+
+						if (!is_array($outboundrules))  CLI::DisplayError("The file '" . $filename . "' does not contain valid JSON.", false, false);
+						else
+						{
+							$outboundrules = $do->NormalizeFirewallRules($outboundrules, "outbound");
+
+							$valid = true;
+						}
+					}
+				} while (!$valid);
+
+				if (!count($inboundrules) && !count($outboundrules))  CLI::DisplayError("At least one valid inbound or outbound rule must be specified.", false, false);
+
+			} while (!count($inboundrules) && !count($outboundrules));
+
+			DisplayResult($do->FirewallsUpdate($id, $name, $inboundrules, $outboundrules, $info["droplet_ids"], $info["tags"]));
+		}
+		else if ($api === "add-tag" || $api === "remove-tag")
+		{
+			ReinitArgs(array("id", "tag"));
+
+			$result = GetFirewallID();
+			$id = $result["firewall"]["id"];
+			$info = $result["firewall"];
+
+			$result = GetTagName();
+			$tagname = $result["tag"]["name"];
+
+			if ($api === "add-tag")
+			{
+				if (!in_array($tagname, $info["tags"]))  $info["tags"][] = $tagname;
+			}
+			else if ($api === "remove-tag")
+			{
+				$pos = array_search($tagname, $info["tags"]);
+				if ($pos !== false)  array_splice($info["tags"], $pos, 1);
+			}
+
+			DisplayResult($do->FirewallsUpdate($id, $info["name"], $info["inbound_rules"], $info["outbound_rules"], $info["droplet_ids"], $info["tags"]));
+		}
 		else
 		{
+			ReinitArgs(array("id"));
+
 			$result = GetFirewallID();
 			$id = $result["firewall"]["id"];
 			$info = $result["firewall"];
 
 			if ($api === "get-info")  DisplayResult($result);
 			else if ($api === "delete")  DisplayResult($do->FirewallsDelete($id));
-			else if ($api === "update")
-			{
-				$name = CLI::GetUserInputWithArgs($args, "name", "Firewall name", $info["name"], "", $suppressoutput);
-
-				do
-				{
-					do
-					{
-						$valid = false;
-						$filename = CLI::GetUserInputWithArgs($args, "inboundrules", "Inbound rules filename", "", "", $suppressoutput);
-						if ($filename === "")
-						{
-							$inboundrules = $info["inbound_rules"];
-
-							$valid = true;
-						}
-						else if (!file_exists($filename))
-						{
-							CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
-						}
-						else
-						{
-							$inboundrules = json_decode(file_get_contents($filename), true);
-
-							if (!is_array($inboundrules))  CLI::DisplayError("The file '" . $filename . "' does not contain valid JSON.", false, false);
-							else
-							{
-								$inboundrules = $do->NormalizeFirewallRules($inboundrules, "inbound");
-
-								$valid = true;
-							}
-						}
-					} while (!$valid);
-
-					do
-					{
-						$valid = false;
-						$filename = CLI::GetUserInputWithArgs($args, "outboundrules", "Outbound rules filename", "", "", $suppressoutput);
-						if ($filename === "")
-						{
-							$outboundrules = $info["outbound_rules"];
-
-							$valid = true;
-						}
-						else if (!file_exists($filename))
-						{
-							CLI::DisplayError("The file '" . $filename . "' does not exist.", false, false);
-						}
-						else
-						{
-							$outboundrules = json_decode(file_get_contents($filename), true);
-
-							if (!is_array($outboundrules))  CLI::DisplayError("The file '" . $filename . "' does not contain valid JSON.", false, false);
-							else
-							{
-								$outboundrules = $do->NormalizeFirewallRules($outboundrules, "outbound");
-
-								$valid = true;
-							}
-						}
-					} while (!$valid);
-
-					if (!count($inboundrules) && !count($outboundrules))  CLI::DisplayError("At least one valid inbound or outbound rule must be specified.", false, false);
-
-				} while (!count($inboundrules) && !count($outboundrules));
-
-				DisplayResult($do->FirewallsUpdate($id, $name, $inboundrules, $outboundrules, $info["droplet_ids"], $info["tags"]));
-			}
-			else if ($api === "add-tag")
-			{
-				$result = GetTagName();
-				$tagname = $result["tag"]["name"];
-
-				if (!in_array($tagname, $info["tags"]))  $info["tags"][] = $tagname;
-
-				DisplayResult($do->FirewallsUpdate($id, $info["name"], $info["inbound_rules"], $info["outbound_rules"], $info["droplet_ids"], $info["tags"]));
-			}
-			else if ($api === "remove-tag")
-			{
-				$result = GetTagName();
-				$tagname = $result["tag"]["name"];
-
-				$pos = array_search($tagname, $info["tags"]);
-				if ($pos !== false)  array_splice($info["tags"], $pos, 1);
-
-				DisplayResult($do->FirewallsUpdate($id, $info["name"], $info["inbound_rules"], $info["outbound_rules"], $info["droplet_ids"], $info["tags"]));
-			}
 			else if ($api === "add-droplet")
 			{
 				$result = GetDropletID();
@@ -1399,6 +2029,8 @@
 		// Images.
 		if ($api === "list")
 		{
+			ReinitArgs(array("type"));
+
 			$types = array(
 				"all" => "All images",
 				"dist" => "Just distribution images",
@@ -1417,33 +2049,79 @@
 
 			DisplayResult($do->ImagesList(true, $extra));
 		}
+		else if ($api === "create")
+		{
+			ReinitArgs(array("name", "url", "distro", "desc"));
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "Image name", false, "", $suppressoutput);
+			$url = CLI::GetUserInputWithArgs($args, "url", "Image URL", false, "For this next question, specify a URL to an image in raw, qcow2, vhdx, vdi, or vmdk format.  It must be under 100GB when uncompressed.", $suppressoutput);
+
+			// Get supported Droplet region.
+			$region = GetDropletRegion("Region", false, false, false, false, true, "");
+
+			$distributions = array(
+				"Arch Linux",
+				"CentOS",
+				"CoreOS",
+				"Debian",
+				"Fedora",
+				"Fedora Atomic",
+				"FreeBSD",
+				"Gentoo",
+				"openSUSE",
+				"RancherOS",
+				"Ubuntu",
+				"Unknown"
+			);
+
+			$imageopts = array();
+			$pos = CLI::GetLimitedUserInputWithArgs($args, "distro", "Distro", "Unknown", "Available distributions:", $distributions, true, $suppressoutput);
+			$imageopts["distribution"] = $distributions[$pos];
+			$imageopts["desc"] = CLI::GetUserInputWithArgs($args, "desc", "Description", "", "", $suppressoutput);
+
+			DisplayResult($do->ImagesCreate($name, $url, $region, $imageopts));
+		}
+		else if ($api === "actions")
+		{
+			ReinitArgs(array("image", "pages"));
+
+			// Retrieve an appropriate image.
+			$result = GetDropletImage("Image", false, false, false, true);
+			$image = $result["id"];
+
+			$numpages = (int)CLI::GetUserInputWithArgs($args, "pages", "Number of pages to retrieve", "1", "", $suppressoutput);
+
+			DisplayResult($do->ImagesActionsList($image, $numpages));
+		}
+		else if ($api === "rename")
+		{
+			ReinitArgs(array("image", "name"));
+
+			// Retrieve an appropriate image.
+			$result = GetDropletImage("Image", false, false, false, true);
+			$image = $result["id"];
+
+			$newname = CLI::GetUserInputWithArgs($args, "name", "New name", false, "", $suppressoutput);
+
+			DisplayResult($do->ImagesRename($image, $newname));
+		}
 		else
 		{
+			ReinitArgs(array("image"));
+
 			// Retrieve an appropriate image.
-			$result = GetDropletImage("Image", false, false, false, ($api === "rename" || $api === "delete"));
+			$result = GetDropletImage("Image", false, false, false);
 			$image = $result["id"];
 
 			if ($api === "get-info")  DisplayResult($result);
-			else if ($api === "actions")
-			{
-				$numpages = (int)CLI::GetUserInputWithArgs($args, "pages", "Number of pages to retrieve", "1", "", $suppressoutput);
-
-				DisplayResult($do->ImagesActionsList($image, $numpages));
-			}
-			else if ($api === "rename")
-			{
-				$newname = CLI::GetUserInputWithArgs($args, "name", "New name", false, "", $suppressoutput);
-
-				DisplayResult($do->ImagesRename($image, $newname));
-			}
-			else if ($api === "delete")
-			{
-				DisplayResult($do->ImagesDelete($image));
-			}
+			else if ($api === "delete")  DisplayResult($do->ImagesDelete($image));
 		}
 	}
 	else if ($apigroup === "image-actions")
 	{
+		if ($api === "transfer")  ReinitArgs(array("image", "region", "wait"));
+		else  ReinitArgs(array("image", "wait"));
+
 		// Retrieve an appropriate image.
 		$result = GetDropletImage("Image", false, false, false, true, ($api === "convert" ? "backup" : false));
 		$image = $result["id"];
@@ -1470,6 +2148,8 @@
 		if ($api === "list")  DisplayResult($do->LoadBalancersList());
 		else if ($api === "create")
 		{
+			ReinitArgs(array("name", "region", "entryproto", "entryport", "targetproto", "targetport", "id", "algorithm", "healthproto", "healthport", "healthpath", "healthinterval", "healthtimeout", "healthfail", "healthpass", "stickytype", "stickycookie", "stickycookiettl", "mode", "tag"));
+
 			$name = CLI::GetUserInputWithArgs($args, "name", "Load balancer name", false, "", $suppressoutput);
 
 			$region = GetDropletRegion("Load balancer region", false, false, false, false, false, "");
@@ -1591,154 +2271,177 @@
 
 			DisplayResult($do->LoadBalancersCreate($name, $region, $forwardingrules, $balanceropts));
 		}
+		else if ($api === "update")
+		{
+			ReinitArgs(array("id", "name", "algorithm", "healthproto", "healthport", "healthpath", "healthinterval", "healthtimeout", "healthfail", "healthpass", "stickytype", "stickycookie", "stickycookiettl"));
+
+			$result = GetLoadBalancerID();
+			$id = $result["load_balancer"]["id"];
+			$info = $result["load_balancer"];
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "Load balancer name", $info["name"], "", $suppressoutput);
+
+			$algorithms = array(
+				"round_robin" => "Round-robin",
+				"least_connections" => "Least connections"
+			);
+
+			$algorithm = CLI::GetLimitedUserInputWithArgs($args, "algorithm", "Balancing algorithm", $info["algorithm"], "Available balancing algorithms:", $algorithms, true, $suppressoutput);
+
+			// Health check setup.
+			$healthcheck = array();
+			$protocols = array(
+				"http" => "HTTP",
+				"tcp" => "TCP"
+			);
+
+			$healthcheck["protocol"] = CLI::GetLimitedUserInputWithArgs($args, "healthproto", "Health check protocol", $info["health_check"]["protocol"], "The next few questions setup the health check for the load balancer.  Available health check protocols:", $protocols, true, $suppressoutput);
+			$healthcheck["port"] = (int)CLI::GetUserInputWithArgs($args, "healthport", "Health check port", $info["health_check"]["port"], "", $suppressoutput);
+			$healthcheck["path"] = CLI::GetUserInputWithArgs($args, "healthpath", "Health check path", $info["health_check"]["path"], "", $suppressoutput);
+			$healthcheck["check_interval_seconds"] = (int)CLI::GetUserInputWithArgs($args, "healthinterval", "Health check interval", $info["health_check"]["check_interval_seconds"], "", $suppressoutput);
+			$healthcheck["response_timeout_seconds"] = (int)CLI::GetUserInputWithArgs($args, "healthtimeout", "Health check timeout", $info["health_check"]["response_timeout_seconds"], "The number of seconds the Load Balancer instance will wait for a response until marking a health check as failed.", $suppressoutput);
+			$healthcheck["unhealthy_threshold"] = (int)CLI::GetUserInputWithArgs($args, "healthfail", "Health check failure threshold", $info["health_check"]["unhealthy_threshold"], "The number of times a health check must fail for a backend Droplet to be marked 'unhealthy' and be removed from the pool.", $suppressoutput);
+			$healthcheck["healthy_threshold"] = (int)CLI::GetUserInputWithArgs($args, "healthpass", "Health check passing threshold", $info["health_check"]["healthy_threshold"], "The number of times a health check must pass for a backend Droplet to be marked 'healthy' and be re-added to the pool.", $suppressoutput);
+
+			// Sticky sessions setup.
+			$stickysessions = array();
+			$stickytypes = array(
+				"none" => "None",
+				"cookies" => "HTTP cookies"
+			);
+
+			$stickysessions["type"] = CLI::GetLimitedUserInputWithArgs($args, "stickytype", "Sticky session type", $info["sticky_sessions"]["type"], "The next few questions setup the sticky session options for the load balancer, which allow the load balancer to pass traffic onto the same backend for each request by a client.  Note that for sticky cookie sessions to work, the load balancer has to decrypt all traffic.  Available sticky session types:", $stickytypes, true, $suppressoutput);
+
+			if ($stickysessions["type"] === "cookies")
+			{
+				$stickysessions["cookie_name"] = CLI::GetUserInputWithArgs($args, "stickycookie", "Sticky cookie name", (isset($info["sticky_sessions"]["cookie_name"]) ? $info["sticky_sessions"]["cookie_name"] : "LB_DO"), "", $suppressoutput);
+				$stickysessions["cookie_ttl_seconds"] = CLI::GetUserInputWithArgs($args, "stickycookiettl", "Sticky cookie TTL", (isset($info["sticky_sessions"]["cookie_ttl_seconds"]) ? $info["sticky_sessions"]["cookie_ttl_seconds"] : "600"), "The TTL is the amount of time, in seconds, that sticky cookies will be valid for.", $suppressoutput);
+			}
+
+			// Balancer options.
+			$balanceropts = array(
+				"algorithm" => $algorithm,
+				"health_check" => $healthcheck,
+				"sticky_sessions" => $stickysessions,
+				"redirect_http_to_https" => $info["redirect_http_to_https"],
+				"enable_proxy_protocol" => $info["enable_proxy_protocol"]
+			);
+
+			if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
+			else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
+
+			DisplayResult($do->LoadBalancersUpdate($id, $name, $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
+		}
+		else if ($api === "add-forwarding-rule")
+		{
+			ReinitArgs(array("id", "entryproto", "entryport", "targetproto", "targetport"));
+
+			$result = GetLoadBalancerID();
+			$id = $result["load_balancer"]["id"];
+			$info = $result["load_balancer"];
+
+			$protocols = array(
+				"http" => "HTTP",
+				"https" => "HTTPS",
+				"http2" => "HTTP/2",
+				"tcp" => "TCP"
+			);
+
+			$entryproto = CLI::GetLimitedUserInputWithArgs($args, "entryproto", "Entry protocol", false, "Available entry protocols:", $protocols, true, $suppressoutput);
+
+			if ($entryproto === "http")  $entryport = 80;
+			else if ($entryproto === "https" || $entryproto === "http2")  $entryport = 443;
+			else  $entryport = false;
+
+			do
+			{
+				$entryport = (int)CLI::GetUserInputWithArgs($args, "entryport", "Entry port", $entryport, "", $suppressoutput);
+			} while ($entryport < 0 || $entryport > 65535);
+
+			$targetproto = CLI::GetLimitedUserInputWithArgs($args, "targetproto", "Target protocol", $entryproto, "Available target protocols:", $protocols, true, $suppressoutput);
+
+			do
+			{
+				$targetport = (int)CLI::GetUserInputWithArgs($args, "targetport", "Target port", $entryport, "", $suppressoutput);
+			} while ($targetport < 0 || $targetport > 65535);
+
+			if ($entryproto === "https" || $entryproto === "http2")
+			{
+				$certid = GetCertificateID("-", array("-" => "None"));
+				$tlspassthrough = ($certid === "");
+			}
+			else
+			{
+				$certid = "";
+				$tlspassthrough = false;
+			}
+
+			$info["forwarding_rules"][] = array(
+				"entry_protocol" => $entryproto,
+				"entry_port" => $entryport,
+				"target_protocol" => $targetproto,
+				"target_port" => $targetport,
+				"certificate_id" => $certid,
+				"tls_passthrough" => $tlspassthrough
+			);
+
+			// Balancer options.
+			$balanceropts = array(
+				"algorithm" => $info["algorithm"],
+				"health_check" => $info["health_check"],
+				"sticky_sessions" => $info["sticky_sessions"],
+				"redirect_http_to_https" => $info["redirect_http_to_https"],
+				"enable_proxy_protocol" => $info["enable_proxy_protocol"]
+			);
+
+			if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
+			else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
+
+			DisplayResult($do->LoadBalancersUpdate($id, $info["name"], $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
+		}
+		else if ($api === "remove-forwarding-rule")
+		{
+			ReinitArgs(array("id", "rule"));
+
+			$result = GetLoadBalancerID();
+			$id = $result["load_balancer"]["id"];
+			$info = $result["load_balancer"];
+
+			$rules = array();
+			foreach ($info["forwarding_rules"] as $num => $rule)
+			{
+				$rules[$num + 1] = $rule["entry_protocol"] . ":" . $rule["entry_port"] . " => " . $rule["target_protocol"] . ":" . $rule["target_port"];
+			}
+
+			$num = CLI::GetLimitedUserInputWithArgs($args, "rule", "Forwarding rule", false, "Available load balancer forwarding rules:", $rules, true, $suppressoutput);
+			$num--;
+
+			if (isset($info["forwarding_rules"][$num]))  array_splice($info["forwarding_rules"], $num, 1);
+
+			// Balancer options.
+			$balanceropts = array(
+				"algorithm" => $info["algorithm"],
+				"health_check" => $info["health_check"],
+				"sticky_sessions" => $info["sticky_sessions"],
+				"redirect_http_to_https" => $info["redirect_http_to_https"],
+				"enable_proxy_protocol" => $info["enable_proxy_protocol"]
+			);
+
+			if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
+			else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
+
+			DisplayResult($do->LoadBalancersUpdate($id, $info["name"], $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
+		}
 		else
 		{
+			ReinitArgs(array("id"));
+
 			$result = GetLoadBalancerID();
 			$id = $result["load_balancer"]["id"];
 			$info = $result["load_balancer"];
 
 			if ($api === "get-info")  DisplayResult($result);
 			else if ($api === "delete")  DisplayResult($do->LoadBalancersDelete($id));
-			else if ($api === "update")
-			{
-				$name = CLI::GetUserInputWithArgs($args, "name", "Load balancer name", $info["name"], "", $suppressoutput);
-
-				$algorithms = array(
-					"round_robin" => "Round-robin",
-					"least_connections" => "Least connections"
-				);
-
-				$algorithm = CLI::GetLimitedUserInputWithArgs($args, "algorithm", "Balancing algorithm", $info["algorithm"], "Available balancing algorithms:", $algorithms, true, $suppressoutput);
-
-				// Health check setup.
-				$healthcheck = array();
-				$protocols = array(
-					"http" => "HTTP",
-					"tcp" => "TCP"
-				);
-
-				$healthcheck["protocol"] = CLI::GetLimitedUserInputWithArgs($args, "healthproto", "Health check protocol", $info["health_check"]["protocol"], "The next few questions setup the health check for the load balancer.  Available health check protocols:", $protocols, true, $suppressoutput);
-				$healthcheck["port"] = (int)CLI::GetUserInputWithArgs($args, "healthport", "Health check port", $info["health_check"]["port"], "", $suppressoutput);
-				$healthcheck["path"] = CLI::GetUserInputWithArgs($args, "healthpath", "Health check path", $info["health_check"]["path"], "", $suppressoutput);
-				$healthcheck["check_interval_seconds"] = (int)CLI::GetUserInputWithArgs($args, "healthinterval", "Health check interval", $info["health_check"]["check_interval_seconds"], "", $suppressoutput);
-				$healthcheck["response_timeout_seconds"] = (int)CLI::GetUserInputWithArgs($args, "healthtimeout", "Health check timeout", $info["health_check"]["response_timeout_seconds"], "The number of seconds the Load Balancer instance will wait for a response until marking a health check as failed.", $suppressoutput);
-				$healthcheck["unhealthy_threshold"] = (int)CLI::GetUserInputWithArgs($args, "healthfail", "Health check failure threshold", $info["health_check"]["unhealthy_threshold"], "The number of times a health check must fail for a backend Droplet to be marked 'unhealthy' and be removed from the pool.", $suppressoutput);
-				$healthcheck["healthy_threshold"] = (int)CLI::GetUserInputWithArgs($args, "healthpass", "Health check passing threshold", $info["health_check"]["healthy_threshold"], "The number of times a health check must pass for a backend Droplet to be marked 'healthy' and be re-added to the pool.", $suppressoutput);
-
-				// Sticky sessions setup.
-				$stickysessions = array();
-				$stickytypes = array(
-					"none" => "None",
-					"cookies" => "HTTP cookies"
-				);
-
-				$stickysessions["type"] = CLI::GetLimitedUserInputWithArgs($args, "stickytype", "Sticky session type", $info["sticky_sessions"]["type"], "The next few questions setup the sticky session options for the load balancer, which allow the load balancer to pass traffic onto the same backend for each request by a client.  Note that for sticky cookie sessions to work, the load balancer has to decrypt all traffic.  Available sticky session types:", $stickytypes, true, $suppressoutput);
-
-				if ($stickysessions["type"] === "cookies")
-				{
-					$stickysessions["cookie_name"] = CLI::GetUserInputWithArgs($args, "stickycookie", "Sticky cookie name", (isset($info["sticky_sessions"]["cookie_name"]) ? $info["sticky_sessions"]["cookie_name"] : "LB_DO"), "", $suppressoutput);
-					$stickysessions["cookie_ttl_seconds"] = CLI::GetUserInputWithArgs($args, "stickycookiettl", "Sticky cookie TTL", (isset($info["sticky_sessions"]["cookie_ttl_seconds"]) ? $info["sticky_sessions"]["cookie_ttl_seconds"] : "600"), "The TTL is the amount of time, in seconds, that sticky cookies will be valid for.", $suppressoutput);
-				}
-
-				// Balancer options.
-				$balanceropts = array(
-					"algorithm" => $algorithm,
-					"health_check" => $healthcheck,
-					"sticky_sessions" => $stickysessions,
-					"redirect_http_to_https" => $info["redirect_http_to_https"]
-				);
-
-				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
-				else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
-
-				DisplayResult($do->LoadBalancersUpdate($id, $name, $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
-			}
-			else if ($api === "add-forwarding-rule")
-			{
-				$protocols = array(
-					"http" => "HTTP",
-					"https" => "HTTPS",
-					"http2" => "HTTP/2",
-					"tcp" => "TCP"
-				);
-
-				$entryproto = CLI::GetLimitedUserInputWithArgs($args, "entryproto", "Entry protocol", false, "Available entry protocols:", $protocols, true, $suppressoutput);
-
-				if ($entryproto === "http")  $entryport = 80;
-				else if ($entryproto === "https" || $entryproto === "http2")  $entryport = 443;
-				else  $entryport = false;
-
-				do
-				{
-					$entryport = (int)CLI::GetUserInputWithArgs($args, "entryport", "Entry port", $entryport, "", $suppressoutput);
-				} while ($entryport < 0 || $entryport > 65535);
-
-				$targetproto = CLI::GetLimitedUserInputWithArgs($args, "targetproto", "Target protocol", $entryproto, "Available target protocols:", $protocols, true, $suppressoutput);
-
-				do
-				{
-					$targetport = (int)CLI::GetUserInputWithArgs($args, "targetport", "Target port", $entryport, "", $suppressoutput);
-				} while ($targetport < 0 || $targetport > 65535);
-
-				if ($entryproto === "https" || $entryproto === "http2")
-				{
-					$certid = GetCertificateID("-", array("-" => "None"));
-					$tlspassthrough = ($certid === "");
-				}
-				else
-				{
-					$certid = "";
-					$tlspassthrough = false;
-				}
-
-				$info["forwarding_rules"][] = array(
-					"entry_protocol" => $entryproto,
-					"entry_port" => $entryport,
-					"target_protocol" => $targetproto,
-					"target_port" => $targetport,
-					"certificate_id" => $certid,
-					"tls_passthrough" => $tlspassthrough
-				);
-
-				// Balancer options.
-				$balanceropts = array(
-					"algorithm" => $info["algorithm"],
-					"health_check" => $info["health_check"],
-					"sticky_sessions" => $info["sticky_sessions"],
-					"redirect_http_to_https" => $info["redirect_http_to_https"]
-				);
-
-				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
-				else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
-
-				DisplayResult($do->LoadBalancersUpdate($id, $info["name"], $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
-			}
-			else if ($api === "remove-forwarding-rule")
-			{
-				$rules = array();
-				foreach ($info["forwarding_rules"] as $num => $rule)
-				{
-					$rules[$num + 1] = $rule["entry_protocol"] . ":" . $rule["entry_port"] . " => " . $rule["target_protocol"] . ":" . $rule["target_port"];
-				}
-
-				$num = CLI::GetLimitedUserInputWithArgs($args, "rule", "Forwarding rule", false, "Available load balancer forwarding rules:", $rules, true, $suppressoutput);
-				$num--;
-
-				if (isset($info["forwarding_rules"][$num]))  array_splice($info["forwarding_rules"], $num, 1);
-
-				// Balancer options.
-				$balanceropts = array(
-					"algorithm" => $info["algorithm"],
-					"health_check" => $info["health_check"],
-					"sticky_sessions" => $info["sticky_sessions"],
-					"redirect_http_to_https" => $info["redirect_http_to_https"]
-				);
-
-				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
-				else  $balanceropts["droplet_ids"] = $info["droplet_ids"];
-
-				DisplayResult($do->LoadBalancersUpdate($id, $info["name"], $info["region"]["slug"], $info["forwarding_rules"], $balanceropts));
-			}
 			else if ($api === "add-droplet")
 			{
 				$result = GetDropletID("", $info["region"]["slug"]);
@@ -1751,7 +2454,8 @@
 					"algorithm" => $info["algorithm"],
 					"health_check" => $info["health_check"],
 					"sticky_sessions" => $info["sticky_sessions"],
-					"redirect_http_to_https" => $info["redirect_http_to_https"]
+					"redirect_http_to_https" => $info["redirect_http_to_https"],
+					"enable_proxy_protocol" => $info["enable_proxy_protocol"]
 				);
 
 				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
@@ -1772,7 +2476,8 @@
 					"algorithm" => $info["algorithm"],
 					"health_check" => $info["health_check"],
 					"sticky_sessions" => $info["sticky_sessions"],
-					"redirect_http_to_https" => $info["redirect_http_to_https"]
+					"redirect_http_to_https" => $info["redirect_http_to_https"],
+					"enable_proxy_protocol" => $info["enable_proxy_protocol"]
 				);
 
 				if ($info["tag"] !== "")  $balanceropts["tag"] = $info["tag"];
@@ -1782,11 +2487,122 @@
 			}
 		}
 	}
+	else if ($apigroup === "projects")
+	{
+		// Projects.
+		if ($api === "list")  DisplayResult($do->ProjectsList());
+		else if ($api === "create" || $api === "update")
+		{
+			if ($api === "create")  ReinitArgs(array("name", "desc", "purpose", "env", "default"));
+			else
+			{
+				ReinitArgs(array("id", "name", "desc", "purpose", "env", "default"));
+
+				$id = GetProjectID();
+
+				$info = $do->ProjectsGetInfo($id);
+				if (!$info["success"])  DisplayResult($info);
+			}
+
+			$name = CLI::GetUserInputWithArgs($args, "name", "Name", ($api === "update" ? $info["project"]["name"] : false), "", $suppressoutput);
+			$purpose = CLI::GetUserInputWithArgs($args, "purpose", "Purpose", ($api === "update" ? $info["project"]["purpose"] : false), "", $suppressoutput);
+
+			$projectopts = array();
+			$projectopts["description"] = CLI::GetUserInputWithArgs($args, "desc", "Description", ($api === "update" ? $info["project"]["description"] : ""), "", $suppressoutput);
+
+			$environments = array(
+				"dev" => "Development",
+				"staging" => "Staging",
+				"prod" => "Production"
+			);
+
+			$env = CLI::GetLimitedUserInputWithArgs($args, "env", "Environment", ($api === "update" ? $info["project"]["environment"] : false), "Available environments:", $environments, true, $suppressoutput);
+			$projectopts["environment"] = $environments[$env];
+
+			if ($api === "update")  $projectopts["is_default"] = CLI::GetYesNoUserInputWithArgs($args, "default", "Set as default project", ($info["project"]["is_default"] ? "Y" : "N"), "", $suppressoutput);
+
+			if ($api === "create")  DisplayResult($do->ProjectsCreate($name, $purpose, $projectopts));
+			else  DisplayResult($do->ProjectsUpdate($id, $name, $purpose, $projectopts));
+		}
+		else
+		{
+			ReinitArgs(array("id"));
+
+			$id = GetProjectID();
+
+			if ($api === "get-info")  DisplayResult($do->ProjectsGetInfo($id));
+		}
+	}
+	else if ($apigroup === "project-resources")
+	{
+		// Project resources.
+		if ($api === "list")
+		{
+			ReinitArgs(array("id"));
+
+			$id = GetProjectID();
+
+			DisplayResult($do->ProjectResourcesList($id));
+		}
+		else if ($api === "assign")
+		{
+			ReinitArgs(array("id", "urn"));
+
+			$id = GetProjectID("Destination project ID");
+
+			// Get resource URNs.
+			$done = false;
+			$resources = array();
+			if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "urn"))
+			{
+				do
+				{
+					$urn = CLI::GetUserInputWithArgs($args, "urn", (count($tags) ? "Another resource URN" : "Resource URN"), "", "", $suppressoutput);
+					if ($urn !== "")  $resources[] = $urn;
+				} while ($urn !== "" && ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "urn")));
+
+				if ($urn === "")  $done = true;
+			}
+
+			if (!$done)
+			{
+				// Get all resource URNs except for those assigned to the current project ID.
+				$result = $do->ProjectsList();
+				if (!$result["success"])  DisplayResult($result);
+
+				$urns = array();
+				foreach ($result["data"] as $project)
+				{
+					if ($project["id"] === $id)  continue;
+
+					$result2 = $do->ProjectResourcesList($project["id"]);
+					if (!$result2["success"])  DisplayResult($result2);
+
+					foreach ($result2["data"] as $resource)
+					{
+						$urns[$resource["urn"]] = $project["name"] . ", " . substr($resource["assigned_at"], 0, 10);
+					}
+				}
+
+				if (count($urns))
+				{
+					$urns2 = CLI::GetLimitedUserInputWithArgs($args, "urn", "Resource URN", "", "Available resource URNs:", $urns, true, $suppressoutput, array("exit" => "", "nextquestion" => "Another resource URN", "nextdefault" => ""));
+					foreach ($urns2 as $urn)  $resources[] = $urn;
+				}
+			}
+
+			if (!count($resources))  CLI::DisplayError("No resource URNs specified.");
+
+			DisplayResult($do->ProjectResourcesAssign($id, $resources));
+		}
+	}
 	else if ($apigroup === "snapshots")
 	{
 		// Snapshots.
 		if ($api === "list")
 		{
+			ReinitArgs(array("type"));
+
 			$types = array(
 				"all" => "All snapshots",
 				"droplet" => "Just droplet snapshots",
@@ -1805,6 +2621,8 @@
 		}
 		else
 		{
+			ReinitArgs(array("snapshot"));
+
 			// Retrieve snapshot.
 			if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "snapshot"))
 			{
@@ -1841,47 +2659,32 @@
 		if ($api === "list")  DisplayResult($do->SSHKeysList());
 		else if ($api === "create")
 		{
+			ReinitArgs(array("name", "publickey"));
+
 			$name = CLI::GetUserInputWithArgs($args, "name", "SSH key name", false, "", $suppressoutput);
-			$publickey = CLI::GetUserInputWithArgs($args, "public_key", "SSH public key", false, "For this next question, you need a valid SSH public key.  The public key looks like 'ssh-rsa {really long string} {generator-info}'.  You can specify either the filename where the public key is stored or copy and paste the public key.  If you don't have a SSH key pair, try 'ssh-keygen -t rsa -b 4096' (*NIX), puttygen (Windows), or the CubicleSoft PHP SSH key generator.\n", $suppressoutput);
+			$publickey = CLI::GetUserInputWithArgs($args, "publickey", "SSH public key", false, "For this next question, you need a valid SSH public key.  The public key looks like 'ssh-rsa {really long string} {generator-info}'.  You can specify either the filename where the public key is stored or copy and paste the public key.  If you don't have a SSH key pair, try 'ssh-keygen -t rsa -b 4096' (*NIX), puttygen (Windows), or the CubicleSoft PHP SSH key generator.\n", $suppressoutput);
 			if (file_exists($publickey))  $publickey = file_get_contents($publickey);
 
 			DisplayResult($do->SSHKeysCreate($name, $publickey));
 		}
+		else if ($api === "rename")
+		{
+			ReinitArgs(array("sshkey", "name"));
+
+			$result = GetSSHKey();
+
+			$newname = CLI::GetUserInputWithArgs($args, "name", "New name", false, "", $suppressoutput);
+
+			DisplayResult($do->SSHKeysRename($result["ssh_key"]["id"], $newname));
+		}
 		else
 		{
-			if ($suppressoutput || CLI::CanGetUserInputWithArgs($args, "ssh_key"))
-			{
-				$id = CLI::GetUserInputWithArgs($args, "ssh_key", "SSH key ID", false, "", $suppressoutput);
+			ReinitArgs(array("sshkey"));
 
-				$result = $do->SSHKeysGetInfo($id);
-				if (!$result["success"])  DisplayResult($result);
-			}
-			else
-			{
-				$result = $do->SSHKeysList();
-				if (!$result["success"])  DisplayResult($result);
-
-				$ids = array();
-				$ids2 = array();
-				foreach ($result["data"] as $sshkey)
-				{
-					$ids[$sshkey["id"]] = $sshkey["name"] . " | " . $sshkey["fingerprint"];
-					$ids2[$sshkey["id"]] = $sshkey;
-				}
-				if (!count($ids))  CLI::DisplayError("No SSH keys have been created/registered.  Try creating/registering your first SSH key with the API:  ssh-keys create");
-				$id = CLI::GetLimitedUserInputWithArgs($args, "ssh_key", "SSH key ID", false, "Available SSH keys:", $ids, true, $suppressoutput);
-				unset($result["data"]);
-				$result["ssh_key"] = $ids2[$id];
-			}
+			$result = GetSSHKey();
 
 			if ($api === "get-info")  DisplayResult($result);
-			else if ($api === "rename")
-			{
-				$newname = CLI::GetUserInputWithArgs($args, "name", "New name", false, "", $suppressoutput);
-
-				DisplayResult($do->SSHKeysRename($id, $newname));
-			}
-			else if ($api === "delete")  DisplayResult($do->SSHKeysDelete($id));
+			else if ($api === "delete")  DisplayResult($do->SSHKeysDelete($result["ssh_key"]["id"]));
 		}
 	}
 	else if ($apigroup === "regions")
@@ -1900,6 +2703,8 @@
 		if ($api === "list")  DisplayResult($do->FloatingIPsList());
 		else if ($api === "create")
 		{
+			ReinitArgs(array("type", "id", "region", "wait"));
+
 			$types = array(
 				"droplet" => "Droplet",
 				"region" => "Region"
@@ -1921,26 +2726,33 @@
 
 			DisplayResult($do->FloatingIPsCreate($type, $id), $wait);
 		}
+		else if ($api === "actions")
+		{
+			ReinitArgs(array("ipaddr", "pages"));
+
+			$result = GetFloatingIPAddr();
+			$ipaddr = $result["ipaddr"]["ip"];
+
+			$numpages = (int)CLI::GetUserInputWithArgs($args, "pages", "Number of pages to retrieve", "1", "", $suppressoutput);
+
+			DisplayResult($do->FloatingIPsActionsList($ipaddr, $numpages));
+		}
 		else
 		{
+			ReinitArgs(array("ipaddr"));
+
 			$result = GetFloatingIPAddr();
 			$ipaddr = $result["ipaddr"]["ip"];
 
 			if ($api === "get-info")  DisplayResult($result);
-			else if ($api === "actions")
-			{
-				$numpages = (int)CLI::GetUserInputWithArgs($args, "pages", "Number of pages to retrieve", "1", "", $suppressoutput);
-
-				DisplayResult($do->FloatingIPsActionsList($ipaddr, $numpages));
-			}
-			else if ($api === "delete")
-			{
-				DisplayResult($do->FloatingIPsDelete($ipaddr));
-			}
+			else if ($api === "delete")  DisplayResult($do->FloatingIPsDelete($ipaddr));
 		}
 	}
 	else if ($apigroup === "floating-ip-actions")
 	{
+		if ($api === "assign")  ReinitArgs(array("ipaddr", "id", "wait"));
+		else  ReinitArgs(array("ipaddr", "wait"));
+
 		$result = GetFloatingIPAddr();
 		$ipaddr = $result["ipaddr"]["ip"];
 
@@ -1967,78 +2779,68 @@
 		if ($api === "list")  DisplayResult($do->TagsList());
 		else if ($api === "create")
 		{
-			$tagname = CLI::GetUserInputWithArgs($args, "tag_name", "Tag name", false, "", $suppressoutput);
+			ReinitArgs(array("name"));
+
+			$tagname = CLI::GetUserInputWithArgs($args, "name", "Tag name", false, "", $suppressoutput);
 
 			DisplayResult($do->TagsCreate($tagname));
 		}
+		else if ($api === "attach" || $api === "detach")
+		{
+			ReinitArgs(array("tag", "num", "type", "id", "image"));
+
+			$result = GetTagName();
+			$tagname = $result["tag"]["name"];
+
+			$resources = array();
+
+			$num = (int)CLI::GetUserInputWithArgs($args, "num", "Number of resources", "1", "", $suppressoutput);
+
+			while ($num)
+			{
+				$types = array(
+					"droplet" => "Droplet",
+					"image" => "Image",
+					"volume" => "Volume"
+				);
+				$type = CLI::GetLimitedUserInputWithArgs($args, "type", "Resource type", false, "Available tagging resource types:", $types, true, $suppressoutput);
+
+				if ($type === "droplet")
+				{
+					$result2 = GetDropletID();
+					$id = $result2["droplet"]["id"];
+				}
+				else if ($type === "image")
+				{
+					$result2 = GetDropletImage("Image", false, false, false, true);
+					$id = $result2["id"];
+				}
+				else if ($type === "volume")
+				{
+					$result2 = GetVolumeID();
+					$id = $result2["volume"]["id"];
+				}
+
+				$resources[] = array(
+					"resource_id" => $id,
+					"resource_type" => $type
+				);
+
+				$num--;
+			}
+
+			if ($api === "attach")  DisplayResult($do->TagsAttach($tagname, $resources));
+			else  DisplayResult($do->TagsDetach($tagname, $resources));
+		}
 		else
 		{
+			ReinitArgs(array("tag"));
+
 			$result = GetTagName();
 			$tagname = $result["tag"]["name"];
 
 			if ($api === "get-info")  DisplayResult($result);
-			else if ($api === "attach")
-			{
-				$resources = array();
-
-				$num = (int)CLI::GetUserInputWithArgs($args, "num", "Number of resources", "1", "", $suppressoutput);
-
-				while ($num)
-				{
-					$types = array(
-						"droplet" => "Droplet"
-					);
-					$type = CLI::GetLimitedUserInputWithArgs($args, "type", "Resource type", false, "Available tagging resource types:", $types, true, $suppressoutput);
-
-					if ($type === "droplet")
-					{
-						$result2 = GetDropletID();
-						$id = $result2["droplet"]["id"];
-					}
-
-					$resources[] = array(
-						"resource_id" => $id,
-						"resource_type" => $type
-					);
-
-					$num--;
-				}
-
-				DisplayResult($do->TagsAttach($tagname, $resources));
-			}
-			else if ($api === "detach")
-			{
-				$resources = array();
-
-				$num = (int)CLI::GetUserInputWithArgs($args, "num", "Number of resources", "1", "", $suppressoutput);
-
-				while ($num)
-				{
-					$types = array(
-						"droplet" => "Droplet"
-					);
-					$type = CLI::GetLimitedUserInputWithArgs($args, "type", "Resource type", false, "Available tagging resource types:", $types, true, $suppressoutput);
-
-					if ($type === "droplet")
-					{
-						$result2 = GetDropletID($tagname);
-						$id = $result2["droplet"]["id"];
-					}
-
-					$resources[] = array(
-						"resource_id" => $id,
-						"resource_type" => $type
-					);
-
-					$num--;
-				}
-
-				DisplayResult($do->TagsDetach($tagname, $resources));
-			}
-			else if ($api === "delete")
-			{
-				DisplayResult($do->TagsDelete($tagname));
-			}
+			else if ($api === "delete")  DisplayResult($do->TagsDelete($tagname));
 		}
 	}
 	else if ($apigroup === "oauth")

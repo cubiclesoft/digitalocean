@@ -412,6 +412,37 @@
 			return $result;
 		}
 
+		// Content Devliery Networks (CDNs).
+		public function CDNEndpointsList($numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "cdn/endpoints" . $apiextra, "endpoints", $numpages, $options);
+		}
+
+		public function CDNEndpointsCreate($origin, $cdnopts = array(), $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "cdn/endpoints" . $apiextra, "endpoint", self::MakeJSONOptions(array_merge(array("origin" => $origin), $cdnopts), $options), 201);
+		}
+
+		public function CDNEndpointsUpdate($id, $cdnopts, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("PUT", "cdn/endpoints/" . $id . $apiextra, "endpoint", self::MakeJSONOptions($cdnopts, $options));
+		}
+
+		public function CDNEndpointsGetInfo($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "cdn/endpoints/" . $id . $apiextra, "endpoint", $options);
+		}
+
+		public function CDNEndpointsPurge($id, $files, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "cdn/endpoints/" . $id . "/cache" . $apiextra, self::MakeJSONOptions(array("files" => $files), $options));
+		}
+
+		public function CDNEndpointsDelete($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "cdn/endpoints/" . $id . $apiextra, $options);
+		}
+
 		// Certificates.
 		public function CertificatesList($numpages = true, $apiextra = "", $options = array())
 		{
@@ -431,6 +462,131 @@
 		public function CertificatesDelete($id, $apiextra = "", $options = array())
 		{
 			return $this->RunAPIGetNone("DELETE", "certificates/" . $id . $apiextra, $options);
+		}
+
+		// Database clusters.
+		public function DatabaseClustersList($numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "databases" . $apiextra, "databases", $numpages, $options);
+		}
+
+		public function DatabaseClustersCreate($name, $engine, $size, $region, $numnodes, $clusteropts = array(), $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "databases" . $apiextra, "database", self::MakeJSONOptions(array_merge(array("name" => $name, "engine" => $engine, "size" => $size, "region" => $region, "num_nodes" => $numnodes), $clusteropts), $options), 201);
+		}
+
+		public function DatabaseClustersResize($id, $size, $numnodes, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("PUT", "databases/" . $id . "/resize" . $apiextra, self::MakeJSONOptions(array("size" => $size, "num_nodes" => $numnodes), $options), 202);
+		}
+
+		public function DatabaseClustersMigrate($id, $region, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("PUT", "databases/" . $id . "/migrate" . $apiextra, self::MakeJSONOptions(array("region" => $region), $options), 202);
+		}
+
+		public function DatabaseClustersMaintenance($id, $day, $hour, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("PUT", "databases/" . $id . "/maintenance" . $apiextra, self::MakeJSONOptions(array("day" => $day, "hour" => $hour), $options), 204);
+		}
+
+		public function DatabaseClustersBackups($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "databases/" . $id . "/backups" . $apiextra, "backups", $options);
+		}
+
+		public function DatabaseClustersGetInfo($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "databases/" . $id . $apiextra, "database", $options);
+		}
+
+		public function DatabaseClustersDelete($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "databases/" . $id . $apiextra, $options);
+		}
+
+		// Database cluster read-only replicas.
+		public function DatabaseReplicasList($id, $numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "databases/" . $id . "/replicas" . $apiextra, "replicas", $numpages, $options);
+		}
+
+		public function DatabaseReplicasCreate($id, $name, $size, $region, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "databases/" . $id . "/replicas" . $apiextra, "replica", self::MakeJSONOptions(array("name" => $name, "size" => $size, "region" => $region), $options), 201);
+		}
+
+		public function DatabaseReplicasGetInfo($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "databases/" . $id . "/replicas/" . $name . $apiextra, "replica", $options);
+		}
+
+		public function DatabaseReplicasDelete($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "databases/" . $id . "/replicas/" . $name . $apiextra, $options);
+		}
+
+		// Database cluster users.
+		public function DatabaseUsersList($id, $numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "databases/" . $id . "/users" . $apiextra, "users", $numpages, $options);
+		}
+
+		public function DatabaseUsersCreate($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "databases/" . $id . "/users" . $apiextra, "user", self::MakeJSONOptions(array("name" => $name), $options), 201);
+		}
+
+		public function DatabaseUsersGetInfo($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "databases/" . $id . "/users/" . $name . $apiextra, "user", $options);
+		}
+
+		public function DatabaseUsersDelete($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "databases/" . $id . "/users/" . $name . $apiextra, $options);
+		}
+
+		// Databases in a database cluster.
+		public function DatabasesList($id, $numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "databases/" . $id . "/dbs" . $apiextra, "dbs", $numpages, $options);
+		}
+
+		public function DatabasesCreate($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "databases/" . $id . "/dbs" . $apiextra, "db", self::MakeJSONOptions(array("name" => $name), $options), 201);
+		}
+
+		public function DatabasesGetInfo($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "databases/" . $id . "/dbs/" . $name . $apiextra, "db", $options);
+		}
+
+		public function DatabasesDelete($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "databases/" . $id . "/dbs/" . $name . $apiextra, $options);
+		}
+
+		// Databases pools for a database.
+		public function DatabasePoolsList($id, $numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "databases/" . $id . "/pools" . $apiextra, "pools", $numpages, $options);
+		}
+
+		public function DatabasePoolsCreate($id, $name, $mode, $size, $db, $user, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "databases/" . $id . "/pools" . $apiextra, "pool", self::MakeJSONOptions(array("name" => $name, "mode" => $mode, "size" => $size, "db" => $db, "user" => $user), $options), 201);
+		}
+
+		public function DatabasePoolsGetInfo($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "databases/" . $id . "/pools/" . $name . $apiextra, "pool", $options);
+		}
+
+		public function DatabasePoolsDelete($id, $name, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetNone("DELETE", "databases/" . $id . "/pools/" . $name . $apiextra, $options);
 		}
 
 		// Domains.
@@ -666,6 +822,11 @@
 			return $this->RunAPIGetList("GET", "images" . $apiextra, "images", $numpages, $options);
 		}
 
+		public function ImagesCreate($name, $url, $region, $imageopts = array(), $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "images" . $apiextra, "image", self::MakeJSONOptions(array_merge(array("name" => $name, "url" => $url, "region" => $region), $imageopts), $options), 202);
+		}
+
 		public function ImagesGetInfo($id, $apiextra = "", $options = array())
 		{
 			return $this->RunAPIGetOne("GET", "images/" . $id . $apiextra, "image", $options);
@@ -725,6 +886,38 @@
 		public function LoadBalancersDelete($id, $apiextra = "", $options = array())
 		{
 			return $this->RunAPIGetNone("DELETE", "load_balancers/" . $id . $apiextra, $options);
+		}
+
+		// Projects.
+		public function ProjectsList($numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "projects" . $apiextra, "projects", $numpages, $options);
+		}
+
+		public function ProjectsCreate($name, $purpose, $projectopts, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "projects" . $apiextra, "project", self::MakeJSONOptions(array_merge(array("name" => $name, "purpose" => $purpose), $projectopts), $options), 201);
+		}
+
+		public function ProjectsUpdate($id, $name, $purpose, $projectopts, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("PUT", "projects/" . $id . $apiextra, "project", self::MakeJSONOptions(array_merge(array("name" => $name, "purpose" => $purpose), $projectopts), $options));
+		}
+
+		public function ProjectsGetInfo($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "projects/" . $id . $apiextra, "project", $options);
+		}
+
+		// Projects resources.
+		public function ProjectResourcesList($id, $numpages = true, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetList("GET", "projects/" . $id . "/resources" . $apiextra, "resources", $numpages, $options);
+		}
+
+		public function ProjectResourcesAssign($id, $resources, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("POST", "projects/" . $id . "/resources" . $apiextra, "resources", self::MakeJSONOptions(array("resources" => $resources), $options));
 		}
 
 		// Snapshots.
@@ -1033,6 +1226,8 @@
 					{
 						if ($expectedkey !== false)
 						{
+							if (!isset($data[$expectedkey]) && array_key_exists($expectedkey, $data))  $data[$expectedkey] = array();
+
 							if (!isset($data[$expectedkey]))  return array("success" => false, "error" => self::DO_Translate("The key '" . $expectedkey . "' does not exist in the data returned by Digital Ocean."), "errorcode" => "missing_expected_key", "info" => $data);
 
 							foreach ($data[$expectedkey] as $item)  $result["data"][] = $item;
