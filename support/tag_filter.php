@@ -110,9 +110,9 @@
 
 								if ($this->options["keep_comments"])
 								{
-									$content2 = substr($content, $pos + 3, $pos2);
+									$content2 = substr($content, $pos + 3, $pos2 - $pos - 3);
 									if ($this->options["charset"] === "UTF-8" && !self::IsValidUTF8($content2))  $content2 = self::MakeValidUTF8($content2);
-									$content2 = "<!-- " . htmlspecialchars($content2, ENT_COMPAT | ENT_HTML5, $this->options["charset"]) . " -->";
+									$content2 = "<!-- " . trim(htmlspecialchars($content2, ENT_COMPAT | ENT_HTML5, $this->options["charset"])) . " -->";
 
 									// Let a callback handle any necessary changes.
 									if (isset($this->options["content_callback"]) && is_callable($this->options["content_callback"]))  call_user_func_array($this->options["content_callback"], array($this->stack, $result, &$content2, $this->options));
@@ -1343,7 +1343,15 @@
 						$y = count($rules[$x]);
 						for ($x2 = 0; $x2 < $y; $x2++)
 						{
-							if (isset($rules[$x][$x2]["namespace"]) && $rules[$x][$x2]["namespace"] !== false && $rules[$x][$x2]["namespace"] !== "*" && (($rules[$x][$x2]["namespace"] === "" && strpos($this->nodes[$id2]["tag"], ":") !== false) || ($rules[$x][$x2]["namespace"] !== "" && strcasecmp(substr($this->nodes[$id2]["tag"], 0, strlen($rules[$x][$x2]["namespace"]) + 1), $rules[$x][$x2]["namespace"] . ":") !== 0)))  $backtrack = true;
+							if ($this->nodes[$id2]["type"] === "content" || $this->nodes[$id2]["type"] === "comment")
+							{
+								// Always backtrack at non-element nodes since the rules are element based.
+								$backtrack = !(isset($rules[$x][$x2]["not"]) && $rules[$x][$x2]["not"]);
+							}
+							else if (isset($rules[$x][$x2]["namespace"]) && $rules[$x][$x2]["namespace"] !== false && $rules[$x][$x2]["namespace"] !== "*" && (($rules[$x][$x2]["namespace"] === "" && strpos($this->nodes[$id2]["tag"], ":") !== false) || ($rules[$x][$x2]["namespace"] !== "" && strcasecmp(substr($this->nodes[$id2]["tag"], 0, strlen($rules[$x][$x2]["namespace"]) + 1), $rules[$x][$x2]["namespace"] . ":") !== 0)))
+							{
+								$backtrack = true;
+							}
 							else
 							{
 								switch ($rules[$x][$x2]["type"])
@@ -2442,7 +2450,12 @@
 			}
 			else
 			{
-				if (isset($options["htmlpurify"]["remove_empty"][substr($tagname, 1)]) && trim($content) === "")  return array("keep_tag" => false);
+				if (isset($options["htmlpurify"]["remove_empty"][substr($tagname, 1)]) && trim(str_replace(array("&nbsp;", "\xC2\xA0"), " ", $content)) === "")
+				{
+					if ($content !== "")  $content = " ";
+
+					return array("keep_tag" => false);
+				}
 			}
 
 			return array();
