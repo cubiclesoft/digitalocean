@@ -561,6 +561,11 @@
 			return $this->RunAPIGetList("GET", "droplets/" . self::MakeValidID($id) . "/actions" . $apiextra, "actions", $numpages, $options);
 		}
 
+		public function DropletsGetInfo($id, $apiextra = "", $options = array())
+		{
+			return $this->RunAPIGetOne("GET", "droplets/" . self::MakeValidID($id) . $apiextra, "droplet", $options);
+		}
+
 		public function DropletsDelete($id, $apiextra = "", $options = array())
 		{
 			return $this->RunAPIGetNone("DELETE", "droplets/" . $id . $apiextra, $options);
