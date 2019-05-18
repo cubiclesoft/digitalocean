@@ -37,7 +37,7 @@ Available access token types:
 Access token type [application]:
 ````
 
-If you choose 'application' (the default), you will enter an interactive login session on the command-line whereby the software attempts to [emulate a web browser](https://github.com/cubiclesoft/ultimate-web-scraper/).  Whenever you are asked for 'Field number', enter the numerical value next to the HTML form field you wish to change the value of, then set the value.  Repeat that process until all form fields are filled in.  It's a bit awkward and nothing you enter into the interface is saved, but it works.  Configuration setup is a one-time process.
+If you choose 'application' (the default), you will be asked to copy a specific URL into your web browser to sign in and authorize and then paste the destination URL back into the tool.  Configuration is a one-time process.
 
 After setup, the world of DigitalOcean APIs opens up to you:
 

@@ -76,154 +76,48 @@
 			return $url;
 		}
 
-		// This is an internal callback function.  Do not directly call it.
-		public function InteractiveLogin__HandleRequest(&$state)
-		{
-			if (substr($state["url"], 0, strlen($this->accesstokens["returnurl"])) === $this->accesstokens["returnurl"])
-			{
-				echo self::DO_Translate("DigitalOcean redirected to '%s'.  Processing response.\n\n", $state["url"]);
-
-				$url = HTTP::ExtractURL($state["url"]);
-
-				if (isset($url["queryvars"]["error"]))  echo self::DO_Translate("Unfortunately, an error occurred:  %s (%s)\n\nDid you deny/cancel the consent?\n\n", $url["queryvars"]["error_description"][0], $url["queryvars"]["error"][0]);
-				else
-				{
-					echo self::DO_Translate("Retrieving refresh token from DigitalOcean...\n");
-
-					$result = $this->UpdateRefreshToken($url["queryvars"]["code"][0]);
-					if (!$result["success"])  echo self::DO_Translate("Unfortunately, an error occurred while attempting to retrieve tokens:  %s (%s)\n\n", $result["error"], $result["errorcode"]);
-					else  echo self::DO_Translate("Refresh token and initial bearer token successfully retrieved!\n\n");
-				}
-
-				return false;
-			}
-
-			echo self::DO_Translate("Retrieving '%s'...\n\n", $state["url"]);
-
-			return true;
-		}
-
 		public function InteractiveLogin()
 		{
-			if (!class_exists("simple_html_dom", false))  require_once str_replace("\\", "/", dirname(__FILE__)) . "/simple_html_dom.php";
-			if (!class_exists("TagFilter", false))  require_once str_replace("\\", "/", dirname(__FILE__)) . "/tag_filter.php";
+			if (!class_exists("CLI", false))  require_once str_replace("\\", "/", dirname(__FILE__)) . "/cli.php";
+			if (!class_exists("HTTP", false))  require_once str_replace("\\", "/", dirname(__FILE__)) . "/http.php";
 
-			echo self::DO_Translate("***************\n");
-			echo self::DO_Translate("Starting interactive login for DigitalOcean.\n\n");
-			echo self::DO_Translate("During the next few minutes, you will be asked to sign into your DigitalOcean account here on the command-line and then approve this application to have access to perform actions on your behalf within your DigitalOcean account.  You may press Ctrl+C at any time to terminate this application.\n\n");
-			echo self::DO_Translate("Every web request made from this point on will be dumped to your console and take the form of \"Retrieving '[URL being retrieved]'...\".\n");
-			echo self::DO_Translate("***************\n\n");
-
-			$html = new simple_html_dom();
-			$web = new WebBrowser(array("httpopts" => array("pre_retrievewebpage_callback" => array($this, "InteractiveLogin__HandleRequest"))));
-			$filteropts = TagFilter::GetHTMLOptions();
-
+			// Reset refresh and bearer tokens.
 			$this->accesstokens["refreshtoken"] = false;
 			$this->accesstokens["bearertoken"] = false;
 			$this->accesstokens["bearerexpirets"] = -1;
 
-			$result = array(
-				"url" => $this->GetLoginURL(),
-				"options" => array()
-			);
+			echo self::DO_Translate("********************************************\n");
+			echo self::DO_Translate("Starting interactive login for DigitalOcean.\n\n");
+			echo self::DO_Translate("Please copy and paste the following OAuth2 URL into a web browser and sign in:\n\n");
+			echo $this->GetLoginURL() . "\n";
+			echo self::DO_Translate("********************************************\n");
 
 			do
 			{
-				$result["options"]["sslopts"] = self::InitSSLOpts(array());
+				$valid = false;
 
-				$result2 = $web->Process($result["url"], $result["options"]);
-				if (!$result2["success"])
-				{
-					if ($this->accesstokens["refreshtoken"] === false)  return $result2;
-
-					echo self::DO_Translate("***************\n");
-					echo self::DO_Translate("Interactive login completed successfully.  Resuming where you left off.\n");
-					echo self::DO_Translate("***************\n\n");
-
-					return array("success" => true);
-				}
-				else if ($result2["response"]["code"] != 200)
-				{
-					return array("success" => false, "error" => self::DO_Translate("Expected a 200 response from DigitalOcean.  Received '%s'.", $result2["response"]["line"]), "errorcode" => "unexpected_digitalocean_response", "info" => $result2);
-				}
+				$tokens = $this->GetAccessTokens();
+				$args = array("params" => array());
+				$url = CLI::GetUserInputWithArgs($args, false, self::DO_Translate("Authorization URL"), false, self::DO_Translate("Once you sign in, your web browser will be redirected to an invalid URL that starts with '%s'.  That will be the Authorization URL to enter for the next question.", $tokens["returnurl"]));
+				if (substr($url, 0, strlen($tokens["returnurl"])) !== $tokens["returnurl"])  CLI::DisplayError("The URL supplied is not valid.", false, false);
 				else
 				{
-					$body = TagFilter::Run($result2["body"], $filteropts);
-					$html->load($body);
+					$url = HTTP::ExtractURL($url);
 
-					echo "-----------------------\n\n";
-
-					$title = $html->find('title', 0);
-					if ($title)  echo trim($title->plaintext) . "\n\n";
-
-					$h1 = $html->find('h1', 0);
-					if ($h1)  echo trim($h1->plaintext) . "\n\n";
-
-					$h2 = $html->find('h2', 0);
-					if ($h2)  echo trim($h1->plaintext) . "\n\n";
-
-					$error = $html->find('.errors', 0);
-					if ($error)  echo trim(preg_replace('/\s+/', " ", $error->plaintext)) . "\n\n";
-
-					$forms = $web->ExtractForms($result2["url"], $body);
-
-					foreach ($forms as $num => $form)
-					{
-						if ($form->info["action"] === "https://cloud.digitalocean.com/login/refresh")  unset($forms[$num]);
-					}
-
-					if (!count($forms))
-					{
-						$url = HTTP::ExtractURL($result2["url"]);
-
-						if ($url["host"] === "cloud.digitalocean.com" && $url["path"] === "/v1/oauth/authorize")
-						{
-							// Construct a fake form.  Might be a touch fragile.
-							// Find the window.currentUser Javascript object.
-							$user = false;
-							$preauth = false;
-							$lines = explode("\n", $body);
-							foreach ($lines as $line)
-							{
-								$line = trim($line);
-								if (preg_match('/window\.currentUser\s*=\s*(\{.*\})/', $line, $matches))
-								{
-									$user = json_decode($matches[1], true);
-								}
-
-								if ($preauth === false && substr($line, 0, 14) === "window.preAuth")  $preauth = true;
-								else if (substr($line, 0, 5) === "name:" || substr($line, 0, 12) === "description:" || substr($line, 0, 4) === "url:")  echo $line . "\n\n";
-							}
-
-							if ($user !== false)
-							{
-								$html2 = "<body>";
-								$html2 .= "<form action=\"/oauth/authorize\" method=\"post\">";
-								$html2 .= "<input type=\"hidden\" name=\"" . htmlspecialchars($html->find('meta[name=csrf-param]', 0)->content) . "\" value=\"" . htmlspecialchars($html->find('meta[name=csrf-token]', 0)->content) . "\">";
-								foreach ($url["queryvars"] as $key => $vals)  $html2 .= "<input type=\"hidden\" name=\"" . htmlspecialchars($key) . "\" value=\"" . htmlspecialchars($vals[0]) . "\">";
-								$html2 .= "<input type=\"hidden\" name=\"context_id\" value=\"" . htmlspecialchars($user["current_context_id"]) . "\">";
-								$html2 .= "<input type=\"submit\" name=\"cancel\" value=\"Cancel\">";
-								$html2 .= "<input type=\"submit\" value=\"Authorize application\">";
-								$html2 .= "</form>";
-								$html2 .= "</body>";
-
-								$forms = $web->ExtractForms($result2["url"], $html2);
-							}
-						}
-					}
+					if (isset($url["queryvars"]["error"]))  CLI::DisplayError(self::DO_Translate("Unfortunately, an error occurred:  %s (%s).  Did you deny/cancel the consent?", $url["queryvars"]["error_description"][0], $url["queryvars"]["error"][0]), false, false);
 					else
 					{
-						$text = $html->find('p');
-						if ($text)
-						{
-							foreach ($text as $text2)  echo trim(preg_replace('/\s+/', " ", $text2->plaintext)) . "\n\n";
-						}
+						$result = $this->UpdateRefreshToken($url["queryvars"]["code"][0]);
+						if (!$result["success"])  CLI::DisplayError(self::DO_Translate("Unfortunately, an error occurred while attempting to retrieve the refresh/bearer tokens:  %s (%s).  Try the process again.", $result["error"], $result["errorcode"]), false, false);
+						else  $valid = true;
 					}
-
-					$result = $web->InteractiveFormFill($forms);
-					if ($result === false)  return array("success" => false, "error" => self::DO_Translate("Expected at least one form to exist.  Received none."), "errorcode" => "invalid_digitalocean_response", "info" => $result2);
 				}
-			} while (1);
+			} while (!$valid);
+
+			echo "\n";
+			echo self::DO_Translate("Interactive login completed successfully.\n");
+
+			return array("success" => true);
 		}
 
 		public function UpdateRefreshToken($code)
