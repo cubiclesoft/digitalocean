@@ -1558,7 +1558,7 @@
 		}
 		else if ($api === "create")
 		{
-			ReinitArgs(array("name", "size", "backups", "ipv6", "private_network", "storage", "metadata", "region", "image", "volume", "ssh_key", "tag", "wait"));
+			ReinitArgs(array("name", "size", "backups", "ipv6", "private_network", "storage", "metadata", "region", "image", "volume", "sshkey", "tag", "wait"));
 
 			// Get Droplet name.
 			$name = CLI::GetUserInputWithArgs($args, "name", "Droplet name", false, "When a Droplet name is set to a domain name managed in the DigitalOcean DNS management system, the name will be used to configure a PTR record for the Droplet.  Each name set during creation will also determine the hostname for the Droplet in its internal configuration.\n", $suppressoutput);
