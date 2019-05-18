@@ -52,7 +52,7 @@ php do.php droplets list
 
 php do.php droplets create
 
-php do.php -s droplets create -name mydroplet -size s-1vcpu-1gb -backups N -ipv6 Y -private_network N -storage N -metadata '' -region nyc1 -image ubuntu-18-04-x64 -sshkey 123456 -sshkey 123457 -sshkey '' -wait Y
+php do.php -s droplets create -name mydroplet -size s-1vcpu-1gb -backups N -ipv6 Y -private_network N -storage N -metadata '' -region nyc1 -image ubuntu-18-04-x64 -sshkey 123456 -sshkey 123457 -sshkey '' -tag '' -wait Y
 ````
 
 The -s option suppresses normal output (except for fatal error conditions), which allows for the processed JSON result to be the only thing that is output.
