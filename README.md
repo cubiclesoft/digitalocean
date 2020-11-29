@@ -3,7 +3,7 @@ DigitalOcean PHP SDK + Command-line Interface
 
 A DigitalOcean PHP SDK that also comes with a feature-complete command-line interface that uses the SDK.  Full support for all DigitalOcean APIs.
 
-[![Donate](https://cubiclesoft.com/res/donate-shield.png)](https://cubiclesoft.com/donate/)
+[![Donate](https://cubiclesoft.com/res/donate-shield.png)](https://cubiclesoft.com/donate/) [![Discord](https://img.shields.io/discord/777282089980526602?label=chat&logo=discord)](https://cubiclesoft.com/product-support/github/)
 
 Features
 --------
